@@ -1,0 +1,13 @@
+{
+  "name": "CatView",
+  "slug": "catview",
+  "identifier": "me.sogud.catview",
+  "version": "0.1.0",
+  "icon": "assets/app-icon-preview.png",
+  "out": "build",
+  "resources": [
+    "assets/filetype-material-icon-theme-LICENSE.txt",
+    "THIRD_PARTY_LICENSES.txt"
+  ],
+  "copyright": "Copyright (c) 2026 sogud"
+}

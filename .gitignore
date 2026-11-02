@@ -1,0 +1,15 @@
+# Generated app and Go compiler outputs
+build/
+.mygo/
+catview
+*.app/
+.DS_Store
+
+# Local credentials and updater signing keys
+.env
+.env.*
+*.pem
+*.key
+mygo-update.key
+credentials.json
+secrets.json
