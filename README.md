@@ -21,6 +21,29 @@
 
 > **Alpha 提示**：当前构建仅做本地临时签名，**尚未经过 Apple 公证**，首次打开可能被 macOS Gatekeeper 拦截。请通过「系统设置 → 隐私与安全性」确认来源后再决定是否打开。暂不提供 Intel Mac 的预编译安装包。
 
+### 一行安装（推荐）
+
+在「终端」里运行（Apple Silicon，macOS 12+）：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh
+```
+
+脚本会下载最新版本（包括预览版），校验 SHA-256，把 `CatView.app` 装到「应用程序」（没有写入权限时装到 `~/Applications`）。用这种方式安装不会弹出 Gatekeeper 拦截。指定版本：`curl -fsSL … | VERSION=v0.1.0-alpha.1 sh`；卸载：`curl -fsSL … | sh -s -- --uninstall`（不删设置和数据）。安装前可以先看看[脚本内容](install.sh)。
+
+<details>
+<summary>用浏览器下载后提示「无法验证开发者」</summary>
+
+方法一：在终端运行
+
+```sh
+xattr -dr com.apple.quarantine /Applications/CatView.app
+```
+
+方法二：先双击打开一次，然后进入 **系统设置 → 隐私与安全性**，在下方找到「已阻止打开 CatView」，点 **仍要打开**，再输入密码确认。
+
+</details>
+
 ## 快捷键
 
 | 操作 | 快捷键 |
