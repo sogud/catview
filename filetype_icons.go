@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -37,6 +38,27 @@ func loadFileIcons() map[string]*ui.SVG {
 		icons[name] = icon
 	}
 	return icons
+}
+
+// treeIcon uses the actual Finder icon, including custom file and folder icons.
+// Cache decoded Retina-sized images for this tree, not on every UI frame.
+func (a *application) treeIcon(path string, isDirectory bool, expanded bool) ui.ImageSource {
+	if a.fileIconStyle == 0 {
+		if a.systemIcons == nil {
+			a.systemIcons = make(map[string]ui.ImageSource)
+		}
+		icon, cached := a.systemIcons[path]
+		if !cached {
+			if data, err := mygo.Shell.FileIcon(path, 34); err == nil {
+				icon, _ = ui.DecodeImage(data)
+			}
+			a.systemIcons[path] = icon
+		}
+		if icon != nil {
+			return icon
+		}
+	}
+	return iconForFile(path, isDirectory, expanded)
 }
 
 func iconForFile(path string, isDirectory bool, expanded bool) *ui.SVG {

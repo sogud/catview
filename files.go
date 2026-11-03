@@ -43,7 +43,10 @@ type fileEntry struct {
 }
 
 type document struct {
+	translation        documentTranslation
 	path               string
+	scopeRoot          string
+	saving             bool
 	kind               documentKind
 	source             string
 	digest             [32]byte
@@ -92,10 +95,6 @@ func (d *document) label() string {
 }
 
 func (a *application) setRoot(chosen string, isDir bool) {
-	if a.doc != nil && a.doc.code != nil && a.doc.code.Buffer.Modified() {
-		a.status = "当前文件有未保存修改，请先保存或取消编辑"
-		return
-	}
 	path, err := filepath.Abs(chosen)
 	if err != nil {
 		a.status = err.Error()
@@ -111,24 +110,19 @@ func (a *application) setRoot(chosen string, isDir bool) {
 		a.status = "所选文件或目录无法打开"
 		return
 	}
-	a.closeEPUB()
-	a.closeHTMLPreview()
-	if a.pdf != nil {
-		a.pdf.Destroy()
-		a.pdf = nil
-	}
 	a.root = path
 	a.rootIsFile = !isDir
-	a.selected = ""
-	a.doc = nil
 	a.loadSerial++
 	a.treeVersion++
-	a.win.SetTitle(filepath.Base(path))
-	a.win.SetRepresentedFile("")
+	if a.doc == nil {
+		a.win.SetTitle(filepath.Base(path))
+		a.win.SetRepresentedFile("")
+	}
 	a.folders = make(map[string][]fileEntry)
 	a.folderErrors = make(map[string]string)
 	a.folderLoading = make(map[string]bool)
 	a.knownFolders = make(map[string]bool)
+	a.systemIcons = nil
 	a.fileOutline.Open.Clear()
 	a.fileRow = -1
 	if isDir {
@@ -202,10 +196,17 @@ func (a *application) inScope(path string) bool {
 	if a.root == "" {
 		return false
 	}
-	root := a.root
+	return pathInScope(a.scopeRoot(), path)
+}
+
+func (a *application) scopeRoot() string {
 	if a.rootIsFile {
-		root = filepath.Dir(root)
+		return filepath.Dir(a.root)
 	}
+	return a.root
+}
+
+func pathInScope(root, path string) bool {
 	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return false
@@ -218,10 +219,13 @@ func (a *application) inScope(path string) bool {
 }
 
 func (a *application) openDocument(path string) {
-	if a.doc != nil && a.doc.code != nil && a.doc.code.Buffer.Modified() {
-		a.restoreSelectedFileRow()
-		a.status = "有未保存改动，请先保存或取消编辑"
-		return
+	path = filepath.Clean(path)
+	for _, d := range a.tabs {
+		if d.path == path {
+			a.loadSerial++
+			a.activateDocument(d)
+			return
+		}
 	}
 	if !a.inScope(path) {
 		a.restoreSelectedFileRow()
@@ -231,41 +235,40 @@ func (a *application) openDocument(path string) {
 	a.status = "正在读取：" + filepath.Base(path)
 	a.loadSerial++
 	serial := a.loadSerial
+	epoch := a.loadEpoch
+	scopeRoot := a.scopeRoot()
 	win := a.win
 	go func() {
 		d, err := readDocument(path)
 		win.Update(func() {
-			if serial != a.loadSerial {
+			if epoch != a.loadEpoch {
 				return
 			}
 			if err != nil {
+				if serial != a.loadSerial {
+					return
+				}
 				log.Printf("CatView: failed to read %s: %v", filepath.Base(path), err)
 				a.restoreSelectedFileRow()
 				a.status = "打开失败：" + err.Error()
 				return
 			}
-			a.closeEPUB()
-			a.closeHTMLPreview()
-			if d.kind != kindPDF && a.pdf != nil {
-				a.pdf.Destroy()
-				a.pdf = nil
+			for _, existing := range a.tabs {
+				if existing.path == path {
+					if serial == a.loadSerial {
+						a.activateDocument(existing)
+					}
+					return
+				}
 			}
-			a.doc = d
-			a.selected = path
+			d.scopeRoot = scopeRoot
 			if d.kind == kindMarkdown {
-				d.md.LoadImage = a.localImageLoader(path)
+				d.md.LoadImage = localImageLoader(path, scopeRoot)
 			}
-			a.status = "已打开 " + filepath.Base(path)
-			a.win.SetTitle(filepath.Base(path))
-			a.win.SetRepresentedFile(path)
-			if d.kind == kindPDF {
-				a.openPDF(path)
-			} else if d.kind == kindEPUB {
-				a.openEPUB(d)
-			} else if d.kind == kindHTML || d.kind == kindOffice || (d.kind == kindMarkdown && d.htmlRich) {
-				a.openHTMLPreview(d)
+			a.tabs = append(a.tabs, d)
+			if serial == a.loadSerial || a.doc == nil {
+				a.activateDocument(d)
 			}
-			a.installMenu()
 		})
 	}()
 }
@@ -351,14 +354,14 @@ func readDocument(path string) (*document, error) {
 
 // Markdown image URLs are treated as untrusted input. Only images inside the
 // selected folder can be opened; URLs, symlinks and active SVG are rejected.
-func (a *application) localImageLoader(markdownPath string) func(string) (ui.ImageSource, error) {
+func localImageLoader(markdownPath, scopeRoot string) func(string) (ui.ImageSource, error) {
 	dir := filepath.Dir(markdownPath)
 	return func(ref string) (ui.ImageSource, error) {
 		if ref == "" || filepath.IsAbs(ref) || strings.Contains(ref, ":") || strings.HasPrefix(ref, "//") {
 			return nil, os.ErrPermission
 		}
 		asset := filepath.Join(dir, filepath.FromSlash(ref))
-		if !a.inScope(asset) {
+		if !pathInScope(scopeRoot, asset) {
 			return nil, os.ErrPermission
 		}
 		info, err := os.Lstat(asset)
@@ -402,14 +405,19 @@ func (a *application) cancelEditing() {
 	if d == nil || !d.editing {
 		return
 	}
+	if d.saving {
+		a.status = a.tr("Cannot finish editing while saving. Please try again.")
+		return
+	}
 	if d.code.Buffer.Modified() {
 		win := a.win
+		tr := a.translatorForUI()
 		go func() {
 			result, err := mygo.Dialog.Message(mygo.MessageOptions{
 				Parent: win, Type: mygo.MessageWarning,
-				Message:       "放弃未保存的改动？",
-				Detail:        "这些改动尚未写入磁盘。",
-				Buttons:       []string{"继续编辑", "放弃改动"},
+				Message:       tr("Discard unsaved changes?"),
+				Detail:        tr("These changes have not been saved to disk."),
+				Buttons:       []string{tr("Keep Editing"), tr("Discard Changes")},
 				DefaultButton: 0, CancelButton: 0,
 			})
 			if err != nil || result.Button != 1 {
@@ -419,36 +427,35 @@ func (a *application) cancelEditing() {
 				if a.doc == d {
 					d.code.Buffer.Reset(d.source)
 					d.editing = false
-					a.status = "已放弃改动"
+					a.status = a.tr("Changes discarded")
 				}
 			})
 		}()
 		return
 	}
 	d.editing = false
-	a.status = "阅读模式"
+	a.status = a.tr("Reading mode")
 }
 
 func (a *application) saveDocument() {
 	d := a.doc
-	if d == nil || !d.canEdit() || !d.editing || d.code == nil || !d.code.Buffer.Modified() {
+	if d == nil || d.saving || !d.canEdit() || !d.editing || d.code == nil || !d.code.Buffer.Modified() {
 		return
 	}
+	d.saving = true
 	text := d.code.Buffer.String()
 	version := d.code.Buffer.Version()
 	oldHash := d.digest
 	mode := d.mode
 	path := d.path
-	a.status = "正在保存…"
+	a.status = a.tr("Saving…")
 	win := a.win
 	go func() {
 		newHash, err := safeSaveText(path, oldHash, mode, text)
 		win.Update(func() {
-			if a.doc != d {
-				return
-			}
+			d.saving = false
 			if err != nil {
-				a.status = "保存失败：" + err.Error()
+				a.status = a.tr("Could not save: ") + a.tr(err.Error())
 				return
 			}
 			d.digest = newHash
@@ -456,7 +463,7 @@ func (a *application) saveDocument() {
 			if d.kind == kindMarkdown {
 				d.htmlRich = requiresHTMLRendering(text)
 			}
-			if d.kind == kindMarkdown || d.kind == kindHTML {
+			if a.doc == d && (d.kind == kindMarkdown || d.kind == kindHTML) {
 				if d.kind == kindHTML || d.htmlRich {
 					a.openHTMLPreview(d)
 				} else {
@@ -467,7 +474,7 @@ func (a *application) saveDocument() {
 				d.code.Buffer.MarkSaved()
 				d.editing = false
 			}
-			a.status = "已保存 " + filepath.Base(path)
+			a.status = a.tr("Saved ") + filepath.Base(path)
 		})
 	}()
 }
@@ -476,7 +483,7 @@ func safeSaveText(path string, expected [32]byte, mode fs.FileMode, text string)
 	var zero [32]byte
 	info, err := os.Lstat(path)
 	if err != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
-		return zero, errors.New("目标已被移动、替换或不是普通文件")
+		return zero, errors.New("The target was moved, replaced, or is not a regular file")
 	}
 	file, err := os.Open(path)
 	if err != nil {
@@ -494,7 +501,7 @@ func safeSaveText(path string, expected [32]byte, mode fs.FileMode, text string)
 	var current [32]byte
 	copy(current[:], before.Sum(nil))
 	if current != expected {
-		return zero, errors.New("文件已被外部程序修改；请重新打开或另存")
+		return zero, errors.New("The file changed outside CatView. Reopen it or save a copy.")
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".catview-save-*")
 	if err != nil {

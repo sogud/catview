@@ -13,3 +13,7 @@ catview
 mygo-update.key
 credentials.json
 secrets.json
+
+# Local translation configuration (the app stores this in Application Support)
+translation.json
+.translation-*

@@ -12,39 +12,51 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/markdown"
+	translatekit "github.com/sogud/translate-kit"
 )
 
 type application struct {
-	win            *mygo.Window
-	settings       *mygo.Window
-	menu           *mygo.Menu
-	shownStatus    string
-	closePrompt    bool
-	root           string
-	rootIsFile     bool
-	selected       string
-	doc            *document
-	folders        map[string][]fileEntry
-	folderErrors   map[string]string
-	folderLoading  map[string]bool
-	knownFolders   map[string]bool
-	fileOutline    ui.OutlineState[string]
-	fileRow        int
-	loadSerial     uint64
-	treeVersion    uint64
-	sidebarVisible bool
-	sidebarWidth   float32
-	themeMode      int // 0 system, 1 light, 2 dark
-	accentIndex    int
-	fontSize       float32
-	lineHeight     float32
-	readingWidth   int
-	recentFolders  []string
-	status         string
-	pdf            *mygo.WebView
-	htmlView       *mygo.WebView
-	epubView       *mygo.WebView
-	epubCancel     func()
+	translator        *translatekit.Client
+	translationConfig translationSettings
+	translationNotice string
+	language          string
+	resolvedLanguage  string
+	win               *mygo.Window
+	settings          *mygo.Window
+	menu              *mygo.Menu
+	shownStatus       string
+	closePrompt       bool
+	checkingUpdate    bool
+	root              string
+	rootIsFile        bool
+	selected          string
+	doc               *document
+	tabs              []*document
+	activeTab         int
+	folders           map[string][]fileEntry
+	folderErrors      map[string]string
+	folderLoading     map[string]bool
+	knownFolders      map[string]bool
+	fileOutline       ui.OutlineState[string]
+	fileRow           int
+	loadSerial        uint64
+	loadEpoch         uint64
+	treeVersion       uint64
+	sidebarVisible    bool
+	sidebarWidth      float32
+	themeMode         int // 0 system, 1 light, 2 dark
+	accentIndex       int
+	fileIconStyle     int // 0 system, 1 Material
+	systemIcons       map[string]ui.ImageSource
+	fontSize          float32
+	lineHeight        float32
+	readingWidth      int
+	recentFolders     []string
+	status            string
+	pdf               *mygo.WebView
+	htmlView          *mygo.WebView
+	epubView          *mygo.WebView
+	epubCancel        func()
 }
 
 func newApplication() *application {
@@ -73,9 +85,9 @@ type accentPalette struct {
 }
 
 var accentPalettes = [...]accentPalette{
-	{"石墨", "#73818A", "#E0E5E7", "#41494D", "#526C7B", "#B6CAD5"},
-	{"雾蓝", "#6588A0", "#DCE7EE", "#3C505D", "#4A728B", "#A6C8DE"},
-	{"苔绿", "#75957C", "#E0E9E1", "#405247", "#4F7861", "#ADD0B9"},
+	{"Graphite", "#73818A", "#E0E5E7", "#41494D", "#526C7B", "#B6CAD5"},
+	{"Blue", "#6588A0", "#DCE7EE", "#3C505D", "#4A728B", "#A6C8DE"},
+	{"Green", "#75957C", "#E0E9E1", "#405247", "#4F7861", "#ADD0B9"},
 }
 
 func (a *application) palette() accentPalette {
@@ -144,12 +156,12 @@ func (a *application) view(c *ui.Context) {
 	root.Children(func() {
 		a.toolbar(c)
 		if a.sidebarVisible {
-			pane := ui.Split(c, &a.sidebarWidth, func() { a.sidebar(c) }, func() { a.reader(c) }).Grow(1)
+			pane := ui.Split(c, &a.sidebarWidth, func() { a.sidebar(c) }, func() { a.documentPane(c) }).Grow(1)
 			if pane.Changed() {
 				a.storePreferences()
 			}
 		} else {
-			a.reader(c)
+			a.documentPane(c)
 		}
 	})
 	if paths := root.DroppedFiles(); len(paths) > 0 {
@@ -162,7 +174,7 @@ func (a *application) view(c *ui.Context) {
 	a.syncMenu()
 	if a.shownStatus != a.status {
 		a.shownStatus = a.status
-		if strings.HasPrefix(a.status, "无法") || strings.HasPrefix(a.status, "拒绝") ||
+		if strings.HasPrefix(a.status, "Cannot") || strings.HasPrefix(a.status, "Could not") || strings.HasPrefix(a.status, "無法") || strings.HasPrefix(a.status, "儲存失敗") || strings.HasPrefix(a.status, "无法") || strings.HasPrefix(a.status, "拒绝") ||
 			strings.HasPrefix(a.status, "打开失败") || strings.HasPrefix(a.status, "保存失败") ||
 			strings.Contains(a.status, "未保存") {
 			c.Toast(a.status)
@@ -191,7 +203,7 @@ func (a *application) rememberFolder(path string) {
 
 func (a *application) recentMenuItems() []*mygo.MenuItem {
 	if len(a.recentFolders) == 0 {
-		return []*mygo.MenuItem{{Label: "无最近文件夹", Disabled: true}}
+		return []*mygo.MenuItem{{Label: a.tr("No recent folders"), Disabled: true}}
 	}
 	items := make([]*mygo.MenuItem, 0, len(a.recentFolders)+2)
 	for _, folder := range a.recentFolders {
@@ -206,7 +218,7 @@ func (a *application) recentMenuItems() []*mygo.MenuItem {
 		})
 	}
 	items = append(items, mygo.Separator(), &mygo.MenuItem{
-		Label: "清除最近记录",
+		Label: a.tr("Clear recent folders"),
 		Click: func(*mygo.MenuItem, *mygo.Window) {
 			a.recentFolders = nil
 			a.storePreferences()
@@ -241,12 +253,12 @@ func (a *application) toolbar(c *ui.Context) {
 		Background(t.Surface).
 		DragWindow().Children(func() {
 		ui.Toolbar(c, func() {
-			if ui.Button(c, "").Label("显示侧边栏").Tooltip("显示或隐藏侧边栏 ⌘B").Children(func() {
+			if ui.Button(c, "").Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
 				ui.Icon(c, sidebarGlyph).FontSize(18)
 			}).Clicked() {
 				a.toggleSidebar()
 			}
-			if ui.Button(c, "").Label("打开文件夹").Tooltip("打开文件夹 ⇧⌘O").Children(func() {
+			if ui.Button(c, "").Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
 				ui.Icon(c, openGlyph).FontSize(18)
 			}).Clicked() {
 				a.choose(true)
@@ -273,13 +285,25 @@ func (a *application) sidebar(c *ui.Context) {
 		}
 		outline := ui.Outline(c, &a.fileOutline, []string{a.root}, a.outlineChildren, func(path string) {
 			isFolder := a.knownFolders[path]
-			icon := iconForFile(path, isFolder, a.fileOutline.Open.Has(path))
-			ui.Row(c).AlignItems(ui.Center).Gap(7).Children(func() {
+			icon := a.treeIcon(path, isFolder, a.fileOutline.Open.Has(path))
+			row := ui.Row(c).Grow(1).AlignItems(ui.Center).Gap(7).KeepFocus().Children(func() {
 				if icon != nil {
 					ui.Image(c, icon).Size(17, 17).Fit(ui.Contain).Shrink(0)
 				}
 				ui.Text(c, filepath.Base(path)).SingleLine().Grow(1).Tooltip(path)
 			})
+			// Only the content handles this click; the sibling disclosure arrow
+			// keeps Outline's built-in behavior, including Option-click.
+			if isFolder && row.Clicked() {
+				for i := 0; i < a.fileOutline.Rows(); i++ {
+					if a.fileOutline.Item(i) == path {
+						a.fileRow = i
+						break
+					}
+				}
+				a.fileOutline.List.Focus(c)
+				a.toggleFolder(path)
+			}
 		}).Grow(1).Padding(7, 6)
 
 		if a.fileRow < 0 || a.fileRow >= a.fileOutline.Rows() {
@@ -290,13 +314,17 @@ func (a *application) sidebar(c *ui.Context) {
 			a.openDocument(path)
 		}
 		if outline.Submitted() && a.knownFolders[path] {
-			if a.fileOutline.Open.Has(path) {
-				a.fileOutline.Open.Remove(path)
-			} else {
-				a.fileOutline.Open.Add(path)
-			}
+			a.toggleFolder(path)
 		}
 	})
+}
+
+func (a *application) toggleFolder(path string) {
+	if a.fileOutline.Open.Has(path) {
+		a.fileOutline.Open.Remove(path)
+	} else {
+		a.fileOutline.Open.Add(path)
+	}
 }
 
 // Return a non-nil slice for a directory, even when it is collapsed,
@@ -326,16 +354,19 @@ func (a *application) outlineChildren(path string) []string {
 
 func (a *application) reader(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Fill().AlignItems(ui.Stretch).Background(t.Background).Children(func() {
+	ui.Column(c).Key(a.selected).Fill().AlignItems(ui.Stretch).Background(t.Background).Children(func() {
 		d := a.doc
 		if d == nil {
-			prompt := "⌘O 打开文件"
+			prompt := a.tr("⌘O Open a file")
 			if a.root != "" {
-				prompt = "选择文件"
+				prompt = a.tr("Choose a file")
 			}
 			ui.Column(c).Fill().Center().Children(func() {
 				ui.Text(c, prompt).TextColor(t.TextMuted)
 			})
+			return
+		}
+		if a.translationReader(c, d) {
 			return
 		}
 		switch d.kind {
@@ -377,18 +408,18 @@ func (a *application) reader(c *ui.Context) {
 			if a.pdf != nil {
 				ui.WebView(c, a.pdf).Grow(1)
 			} else {
-				a.infoView(c, "正在打开 PDF…", "将使用系统内置的 PDF 阅读能力。")
+				a.infoView(c, a.tr("Opening PDF…"), a.tr("Using the system PDF viewer."))
 			}
 		case kindEPUB:
 			if a.epubView != nil {
 				ui.WebView(c, a.epubView).Grow(1)
 			} else {
-				a.infoView(c, "EPUB 无法预览", "请尝试其他 EPUB 文件。")
+				a.infoView(c, a.tr("EPUB preview unavailable"), a.tr("Try another EPUB file."))
 			}
 		default:
-			a.infoView(c, "暂不支持预览", "可以通过访达使用其他应用打开。")
+			a.infoView(c, a.tr("Preview unavailable"), a.tr("Open with another app in Finder."))
 			ui.Row(c).Center().Children(func() {
-				if ui.Button(c, "在访达中显示").Clicked() {
+				if ui.Button(c, a.tr("Show in Finder")).Clicked() {
 					mygo.Shell.ShowItemInFolder(d.path)
 				}
 			})
@@ -416,9 +447,9 @@ func (a *application) infoView(c *ui.Context, heading, detail string) {
 func (a *application) choose(directory bool) {
 	win := a.win
 	go func() {
-		title := "选择文件"
+		title := a.tr("Choose a file")
 		if directory {
-			title = "选择文件夹"
+			title = a.tr("Choose a folder")
 		}
 		paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Parent: win, Title: title, Directory: directory})
 		if err != nil {
@@ -440,6 +471,7 @@ func (a *application) toggleEditing() {
 	if d.editing {
 		a.cancelEditing()
 	} else {
+		clearTranslation(d)
 		d.editing = true
 	}
 	a.win.Invalidate()
@@ -451,6 +483,7 @@ func (a *application) refreshTree() {
 	a.folderErrors = make(map[string]string)
 	a.folderLoading = make(map[string]bool)
 	a.knownFolders = make(map[string]bool)
+	a.systemIcons = nil
 	if a.root != "" && !a.rootIsFile {
 		a.knownFolders[a.root] = true
 	}
@@ -481,6 +514,7 @@ func (a *application) syncMenu() {
 	if a.menu == nil || a.win == nil {
 		return
 	}
+	a.syncTranslationMenu()
 	d := a.doc
 	canEdit := d != nil && d.canEdit()
 	editing := canEdit && d.editing
@@ -489,6 +523,7 @@ func (a *application) syncMenu() {
 		id      string
 		enabled bool
 	}{
+		{"updates", !a.checkingUpdate},
 		{"edit", canEdit},
 		{"save", editing && dirty},
 		{"reveal", d != nil},
@@ -502,9 +537,9 @@ func (a *application) syncMenu() {
 	}
 	edit := a.menu.ItemByID("edit")
 	if edit != nil {
-		label := "编辑文件"
+		label := a.tr("Edit file")
 		if editing {
-			label = "结束编辑"
+			label = a.tr("Finish editing")
 		}
 		if edit.Label != label {
 			edit.SetLabel(label)
@@ -528,54 +563,67 @@ func (a *application) installMenu() {
 	a.menu = mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu, Submenu: []*mygo.MenuItem{
 			{Role: mygo.RoleAbout}, mygo.Separator(),
-			{Label: "设置…", Accelerator: "CmdOrCtrl+,", Click: action(a.showSettings)},
+			{Label: a.tr("Settings"), Accelerator: "CmdOrCtrl+,", Click: action(a.showSettings)},
+			{ID: "updates", Label: a.tr("Check for updates…"), Click: action(a.checkForUpdates)},
 			mygo.Separator(), {Role: mygo.RoleServices},
 			mygo.Separator(), {Role: mygo.RoleHide}, {Role: mygo.RoleHideOthers}, {Role: mygo.RoleUnhide},
 			mygo.Separator(), {Role: mygo.RoleQuit},
 		}},
-		{Label: "文件", Submenu: []*mygo.MenuItem{
-			{Label: "打开文件…", Accelerator: "CmdOrCtrl+O", Click: action(func() { a.choose(false) })},
-			{Label: "打开文件夹…", Accelerator: "CmdOrCtrl+Shift+O", Click: action(func() { a.choose(true) })},
-			{Label: "最近打开的文件夹", Submenu: a.recentMenuItems()},
+		{Label: a.tr("File"), Submenu: []*mygo.MenuItem{
+			{Label: a.tr("Open file…"), Accelerator: "CmdOrCtrl+O", Click: action(func() { a.choose(false) })},
+			{Label: a.tr("Open folder…"), Accelerator: "CmdOrCtrl+Shift+O", Click: action(func() { a.choose(true) })},
+			{Label: a.tr("Recent folders"), Submenu: a.recentMenuItems()},
 			mygo.Separator(),
-			{ID: "edit", Label: "编辑文件", Disabled: true, Click: action(a.toggleEditing)},
-			{ID: "save", Label: "保存", Accelerator: "CmdOrCtrl+S", Disabled: true, Click: action(a.saveDocument)},
-			{ID: "reveal", Label: "在访达中显示", Disabled: true, Click: action(func() {
+			{ID: "edit", Label: a.tr("Edit file"), Disabled: true, Click: action(a.toggleEditing)},
+			{ID: "save", Label: a.tr("Save"), Accelerator: "CmdOrCtrl+S", Disabled: true, Click: action(a.saveDocument)},
+			{ID: "reveal", Label: a.tr("Show in Finder"), Disabled: true, Click: action(func() {
 				if a.doc != nil {
 					mygo.Shell.ShowItemInFolder(a.doc.path)
 				}
 			})},
 			mygo.Separator(),
-			{Role: mygo.RoleClose},
+			{Label: a.tr("Close tab"), Accelerator: "CmdOrCtrl+W", Click: func(_ *mygo.MenuItem, window *mygo.Window) {
+				if window != nil && window != a.win {
+					window.Close()
+				} else if a.doc != nil {
+					a.requestCloseTab(a.doc, false)
+				} else {
+					a.win.Close()
+				}
+			}},
+			{Label: a.tr("Close window"), Accelerator: "CmdOrCtrl+Shift+W", Click: action(func() { a.win.Close() })},
 		}},
 		{Role: mygo.RoleEditMenu},
-		{Label: "显示", Submenu: []*mygo.MenuItem{
-			{ID: "sidebar", Label: "显示侧边栏", Type: mygo.MenuItemCheckbox,
+		{Label: a.tr("View"), Submenu: []*mygo.MenuItem{
+			{ID: "sidebar", Label: a.tr("Show sidebar"), Type: mygo.MenuItemCheckbox,
 				Checked: true, Accelerator: "CmdOrCtrl+B", Click: action(a.toggleSidebar)},
-			{ID: "refresh", Label: "重新读取目录", Accelerator: "CmdOrCtrl+R", Disabled: true, Click: action(a.refreshTree)},
-			{ID: "find", Label: "查找", Accelerator: "CmdOrCtrl+F", Disabled: true, Click: action(func() {
+			{ID: "refresh", Label: a.tr("Refresh folders"), Accelerator: "CmdOrCtrl+R", Disabled: true, Click: action(a.refreshTree)},
+			{ID: "find", Label: a.tr("Find"), Accelerator: "CmdOrCtrl+F", Disabled: true, Click: action(func() {
 				if a.doc != nil && a.doc.code != nil {
 					a.doc.code.Find("")
 				}
 			})},
 			mygo.Separator(),
-			{Label: "放大文字", Accelerator: "CmdOrCtrl+Plus", Click: action(func() { a.adjustFont(1) })},
-			{Label: "缩小文字", Accelerator: "CmdOrCtrl+-", Click: action(func() { a.adjustFont(-1) })},
+			{Label: a.tr("Increase text size"), Accelerator: "CmdOrCtrl+Plus", Click: action(func() { a.adjustFont(1) })},
+			{Label: a.tr("Decrease text size"), Accelerator: "CmdOrCtrl+-", Click: action(func() { a.adjustFont(-1) })},
 			mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
 		}},
-		{Label: "阅读", Hidden: a.doc == nil || a.doc.kind != kindEPUB,
+		{Label: a.tr("Reading"), Hidden: a.doc == nil || a.doc.kind != kindEPUB,
 			Submenu: a.epubReadMenuItems()},
+		{Label: a.tr("Translation"), Submenu: a.translationMenuItems()},
 		{Role: mygo.RoleWindowMenu},
 	})
 	mygo.App.SetMenu(a.menu)
 }
 
 type savedPreferences struct {
+	Language       string   `json:"language,omitempty"`
 	SidebarVisible bool     `json:"sidebar_visible"`
 	SidebarWidth   float32  `json:"sidebar_width"`
 	ThemeMode      int      `json:"theme_mode"`
 	AccentIndex    int      `json:"accent_index"`
+	FileIconStyle  int      `json:"file_icon_style"`
 	FontSize       float32  `json:"font_size"`
 	LineHeight     float32  `json:"line_height"`
 	ReadingWidth   int      `json:"reading_width"`
@@ -603,12 +651,16 @@ func (a *application) loadPreferences() {
 	if json.Unmarshal(data, &p) != nil {
 		return
 	}
+	a.language = p.Language
 	a.sidebarVisible = p.SidebarVisible
 	if p.SidebarWidth >= 160 && p.SidebarWidth <= 440 {
 		a.sidebarWidth = p.SidebarWidth
 	}
 	if p.ThemeMode >= 0 && p.ThemeMode < 3 {
 		a.themeMode = p.ThemeMode
+	}
+	if p.FileIconStyle == 0 || p.FileIconStyle == 1 {
+		a.fileIconStyle = p.FileIconStyle
 	}
 	if p.AccentIndex >= 0 && p.AccentIndex < 3 {
 		a.accentIndex = p.AccentIndex
@@ -644,11 +696,11 @@ func (a *application) storePreferences() {
 	if path == "" {
 		return
 	}
-	p := savedPreferences{
+	p := savedPreferences{Language: a.language,
 		SidebarVisible: a.sidebarVisible, SidebarWidth: a.sidebarWidth,
 		ThemeMode: a.themeMode, AccentIndex: a.accentIndex, FontSize: a.fontSize,
 		LineHeight: a.lineHeight, ReadingWidth: a.readingWidth,
-		RecentFolders: a.recentFolders,
+		RecentFolders: a.recentFolders, FileIconStyle: a.fileIconStyle,
 	}
 	data, err := json.Marshal(p)
 	if err != nil {
@@ -659,40 +711,13 @@ func (a *application) storePreferences() {
 
 func (a *application) guardClose() {
 	a.win.OnClose(func(ev *mygo.CloseEvent) {
-		d := a.doc
-		if d == nil || d.code == nil || !d.code.Buffer.Modified() {
-			return
-		}
-		ev.PreventDefault()
-		if a.closePrompt {
-			return
-		}
-		a.closePrompt = true
-		win := a.win
-		content := d.code.Buffer.String()
-		go func() {
-			res, err := mygo.Dialog.Message(mygo.MessageOptions{
-				Parent: win, Type: mygo.MessageWarning,
-				Message:       "保存对文件的修改？",
-				Buttons:       []string{"保存", "不保存", "取消"},
-				DefaultButton: 0, CancelButton: 2,
-			})
-			if err == nil {
-				switch res.Button {
-				case 0:
-					_, err = safeSaveText(d.path, d.digest, d.mode, content)
-					if err == nil {
-						win.Destroy()
-						return
-					}
-					mygo.Dialog.Error("保存失败", err.Error())
-				case 1:
-					win.Destroy()
-					return
-				}
+		for _, d := range a.tabs {
+			if documentModified(d) || d.saving {
+				ev.PreventDefault()
+				a.requestCloseTab(d, true)
+				return
 			}
-			win.Update(func() { a.closePrompt = false })
-		}()
+		}
 	})
 }
 
@@ -700,6 +725,8 @@ func main() {
 	app := newApplication()
 	mygo.App.WhenReady(func() {
 		app.loadPreferences()
+		app.resolveLanguage()
+		app.loadTranslationSettings()
 		app.win = mygo.NewWindow(mygo.WindowOptions{
 			Title: "CatView", Width: 1120, Height: 750, MinWidth: 680, MinHeight: 440,
 			TitleBarStyle: mygo.TitleBarHidden,
@@ -708,6 +735,9 @@ func main() {
 		app.installMenu()
 		app.guardClose()
 		app.win.OnClosed(func() {
+			for _, d := range app.tabs {
+				cancelTranslation(d)
+			}
 			app.closeEPUB()
 			app.closeHTMLPreview()
 			if app.pdf != nil {

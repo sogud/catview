@@ -102,7 +102,7 @@ func safeCSSDeclarations(value string) string {
 	return strings.Join(result, ";")
 }
 
-func (a *application) localPreviewImage(sourceFile, imageRef string) string {
+func (a *application) localPreviewImage(sourceFile, imageRef, scopeRoot string) string {
 	if imageRef == "" || strings.ContainsAny(imageRef, "\x00\\") || strings.HasPrefix(imageRef, "//") {
 		return ""
 	}
@@ -115,7 +115,7 @@ func (a *application) localPreviewImage(sourceFile, imageRef string) string {
 		return ""
 	}
 	path := filepath.Join(filepath.Dir(sourceFile), filepath.FromSlash(ref))
-	if !a.inScope(path) {
+	if !pathInScope(scopeRoot, path) {
 		return ""
 	}
 	info, err := os.Lstat(path)
@@ -144,7 +144,7 @@ func (a *application) localPreviewImage(sourceFile, imageRef string) string {
 
 // sanitizePreviewHTML allows typography, tables and local images while
 // removing scripts, active content and attributes with side effects.
-func (a *application) sanitizePreviewHTML(fragment, sourceFile string) (string, error) {
+func (a *application) sanitizePreviewHTML(fragment, sourceFile, scopeRoot string) (string, error) {
 	ctx := &nethtml.Node{Type: nethtml.ElementNode, Data: "div", DataAtom: atom.Div}
 	nodes, err := nethtml.ParseFragment(strings.NewReader(fragment), ctx)
 	if err != nil {
@@ -172,7 +172,7 @@ func (a *application) sanitizePreviewHTML(fragment, sourceFile string) (string, 
 				src := ""
 				for _, attr := range n.Attr {
 					if strings.EqualFold(attr.Key, "src") {
-						src = a.localPreviewImage(sourceFile, attr.Val)
+						src = a.localPreviewImage(sourceFile, attr.Val, scopeRoot)
 					}
 				}
 				if src == "" {
@@ -318,13 +318,13 @@ func (a *application) generateHTMLPreview(d *document) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		body, err := a.sanitizePreviewHTML(html, d.path)
+		body, err := a.sanitizePreviewHTML(html, d.path, d.scopeRoot)
 		if err != nil {
 			return "", err
 		}
 		return a.wrapHTMLPreview(body, false), nil
 	case kindHTML:
-		body, err := a.sanitizePreviewHTML(d.source, d.path)
+		body, err := a.sanitizePreviewHTML(d.source, d.path, d.scopeRoot)
 		if err != nil {
 			return "", err
 		}
