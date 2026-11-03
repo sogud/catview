@@ -5,7 +5,13 @@
   "version": "0.1.0",
   "icon": "assets/app-icon-preview.png",
   "out": "build",
+  "macos": {
+    "infoPlist": {
+      "CFBundleVersion": "0.1.0a2"
+    }
+  },
   "resources": [
+    "LICENSE",
     "assets/filetype-material-icon-theme-LICENSE.txt",
     "THIRD_PARTY_LICENSES.txt"
   ],

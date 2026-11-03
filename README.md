@@ -30,7 +30,7 @@
 curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh
 ```
 
-脚本会下载最新版本（包括预览版），校验 SHA-256，把 `CatView.app` 装到「应用程序」（没有写入权限时装到 `~/Applications`）。用这种方式安装不会弹出 Gatekeeper 拦截。指定版本：`curl -fsSL … | VERSION=v0.1.0-alpha.1 sh`；卸载：`curl -fsSL … | sh -s -- --uninstall`（不删设置和数据）。安装前可以先看看[脚本内容](install.sh)。
+脚本会下载最新版本（包括预览版），校验 SHA-256，把 `CatView.app` 装到「应用程序」（没有写入权限时装到 `~/Applications`）。用这种方式安装不会弹出 Gatekeeper 拦截。指定版本：`curl -fsSL … | VERSION=v0.1.0-alpha.2 sh`；卸载：`curl -fsSL … | sh -s -- --uninstall`（不删设置和数据）。安装前可以先看看[脚本内容](install.sh)。
 
 <details>
 <summary>用浏览器下载后提示「无法验证开发者」</summary>
@@ -60,7 +60,7 @@ xattr -dr com.apple.quarantine /Applications/CatView.app
 
 可通过 macOS「文件」菜单切换最近文件夹。正文与文件名不会额外占用标题栏空间。
 
-## 翻译与界面语言（本地开发版）
+## 翻译与界面语言
 
 设置中可选 18 种界面语言或跟随系统；核心菜单与设置使用 CatView 自有字典；保存/关闭/更新提示已覆盖英文、简体和繁体中文，其余语言缺项回退英文。部分格式阅读错误仍沿用旧提示，未完成全部语言校对与 RTL 布局验收。
 
@@ -70,7 +70,7 @@ xattr -dr com.apple.quarantine /Applications/CatView.app
 
 ## 从源码构建
 
-翻译依赖固定为已发布的 `github.com/sogud/translate-kit v0.1.0`，Go 会自动下载，无需同级源码目录。现有 GitHub Alpha 下载不包含本轮源码新增功能。
+翻译依赖固定为已发布的 `github.com/sogud/translate-kit v0.1.0`，Go 会自动下载，无需同级源码目录。v0.1.0-alpha.2 包含标签页、翻译与手动检查更新；旧版 Alpha 1 用户需手动下载安装一次。
 
 在 macOS 上安装 [Go](https://go.dev/)（以 `go.mod` 的版本要求为准）：
 
