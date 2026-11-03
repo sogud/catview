@@ -70,7 +70,7 @@ xattr -dr com.apple.quarantine /Applications/CatView.app
 
 ## 从源码构建
 
-本地开发暂用 `github.com/sogud/translate-kit v0.0.0`，通过 `replace` 指向同级 `../translate-kit` 源码。共享包尚无已发布版本，单独克隆 CatView 还不能完成构建。现有 GitHub Alpha 下载不包含本轮源码新增功能。
+翻译依赖固定为已发布的 `github.com/sogud/translate-kit v0.1.0`，Go 会自动下载，无需同级源码目录。现有 GitHub Alpha 下载不包含本轮源码新增功能。
 
 在 macOS 上安装 [Go](https://go.dev/)（以 `go.mod` 的版本要求为准）：
 

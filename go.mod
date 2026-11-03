@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/egoist/mygo v0.7.3
-	github.com/sogud/translate-kit v0.0.0
+	github.com/sogud/translate-kit v0.1.0
 	github.com/yuin/goldmark v1.7.17
 	golang.org/x/net v0.62.0
 )
@@ -24,5 +24,3 @@ require (
 	golang.org/x/image v0.46.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 )
-
-replace github.com/sogud/translate-kit => ../translate-kit
