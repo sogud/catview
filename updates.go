@@ -14,7 +14,7 @@ import (
 )
 
 // The public release identifier includes the channel; Info.plist requires 0.1.0.
-const releaseVersion = "0.1.0-alpha.2"
+const releaseVersion = "0.1.0-alpha.3"
 const releaseAPI = "https://api.github.com/repos/sogud/catview/releases?per_page=100"
 
 type releaseInfo struct {

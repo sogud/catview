@@ -15,26 +15,24 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	goldhtml "github.com/yuin/goldmark/renderer/html"
 	nethtml "golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
 
-var richHTMLPattern = regexp.MustCompile(`(?i)<\s*(?:div|span|center|details|summary|figure|figcaption|table|iframe|style|script|picture|img|section|article|ruby|video|audio|svg)(?:\s|/?>)`)
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{3,8}$`)
 var cssLength = regexp.MustCompile(`^(\d{1,4}(?:\.\d{1,2})?)(px|pt|em|rem|%)$`)
-
-func requiresHTMLRendering(content string) bool {
-	return richHTMLPattern.MatchString(content)
-}
 
 func renderMarkdownMarkup(source string) (string, error) {
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		goldmark.WithRendererOptions(goldhtml.WithUnsafe()),
 	)
 	var out bytes.Buffer
-	if err := md.Convert([]byte(source), &out); err != nil {
+	context := parser.NewContext(parser.WithIDs(&headingIDs{used: make(map[string]bool)}))
+	if err := md.Convert([]byte(source), &out, parser.WithContext(context)); err != nil {
 		return "", err
 	}
 	return out.String(), nil
@@ -168,6 +166,9 @@ func (a *application) sanitizePreviewHTML(fragment, sourceFile, scopeRoot string
 				}
 				return
 			}
+			if tag == "code" && n.Parent != nil && n.Parent.Data == "pre" && emitHighlightedCode(&out, n) {
+				return
+			}
 			if tag == "img" {
 				src := ""
 				for _, attr := range n.Attr {
@@ -204,8 +205,9 @@ func (a *application) sanitizePreviewHTML(fragment, sourceFile, scopeRoot string
 					if tag != "a" {
 						continue
 					}
-					u, e := url.Parse(strings.TrimSpace(attr.Val))
-					if e == nil && (strings.HasPrefix(attr.Val, "#") || u.Scheme == "https" || u.Scheme == "http" || u.Scheme == "mailto") {
+					value = previewLink(sourceFile, attr.Val)
+				case "id", "name":
+					if (key == "id" || tag == "a") && len(attr.Val) <= 256 && !strings.ContainsAny(attr.Val, "\x00\r\n\t ") {
 						value = attr.Val
 					}
 				case "title", "alt", "lang", "dir":
@@ -260,19 +262,20 @@ func (a *application) sanitizePreviewHTML(fragment, sourceFile, scopeRoot string
 }
 
 const previewCSS = `
-:root{color-scheme:light dark;--paper:#FBFAF7;--ink:#2B3034;--secondary:var(--link-light,#526C7B);--line:#E0E4E1;--panel:#F4F4F2}
-@media(prefers-color-scheme:dark){:root{--paper:#202225;--ink:#EDF0F1;--secondary:var(--link-dark,#B6CAD5);--line:#3C4144;--panel:#292B2E}}
-:root[data-theme=light]{color-scheme:light;--paper:#FBFAF7;--ink:#2B3034;--secondary:var(--link-light,#526C7B);--line:#E0E4E1;--panel:#F4F4F2}
-:root[data-theme=dark]{color-scheme:dark;--paper:#202225;--ink:#EDF0F1;--secondary:var(--link-dark,#B6CAD5);--line:#3C4144;--panel:#292B2E}
+:root{color-scheme:light dark;--paper:var(--paper-light,#FBFAF7);--ink:var(--ink-light,#2B3034);--secondary:var(--link-light,#526C7B);--line:var(--line-light,#E0E4E1);--panel:var(--panel-light,#F4F4F2)}
+@media(prefers-color-scheme:dark){:root{--paper:var(--paper-dark,#202225);--ink:var(--ink-dark,#EDF0F1);--secondary:var(--link-dark,#B6CAD5);--line:var(--line-dark,#3C4144);--panel:var(--panel-dark,#292B2E)}}
+:root[data-theme=light]{color-scheme:light;--paper:var(--paper-light,#FBFAF7);--ink:var(--ink-light,#2B3034);--secondary:var(--link-light,#526C7B);--line:var(--line-light,#E0E4E1);--panel:var(--panel-light,#F4F4F2)}
+:root[data-theme=dark]{color-scheme:dark;--paper:var(--paper-dark,#202225);--ink:var(--ink-dark,#EDF0F1);--secondary:var(--link-dark,#B6CAD5);--line:var(--line-dark,#3C4144);--panel:var(--panel-dark,#292B2E)}
 *{box-sizing:border-box}
 html,body{padding:0;margin:0;width:100%;min-height:100%}
 body{background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
 main{margin:auto;max-width:var(--reader-width);padding:32px 42px 85px;overflow-wrap:break-word}
 h1,h2,h3,h4,h5,h6{font-weight:650;line-height:1.35;margin:1.35em 0 .55em}
+main>:first-child{margin-top:0}
 h1{font-size:1.85em}h2{font-size:1.45em}h3{font-size:1.2em}h4{font-size:1.08em}
 p{margin:.7em 0 1em}a{color:var(--secondary);text-decoration:underline;text-underline-offset:.16em}
 blockquote{border-left:3px solid var(--line);margin:1.2em 0;padding:.1em 1.1em;color:var(--secondary)}
-pre{font-size:.85em;line-height:1.55;padding:14px 17px;border-radius:7px;background:var(--panel);border:1px solid var(--line);white-space:pre;overflow:auto}
+pre{font-size:1em;line-height:inherit;padding:14px 17px;border-radius:7px;background:var(--paper);border:1px solid var(--line);white-space:pre;overflow:auto;tab-size:4}
 code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 :not(pre)>code,kbd{background:rgba(100,124,145,.10);border-radius:3px;padding:.1em .3em}
 table{max-width:100%;width:100%;border-collapse:collapse;margin:1.2em 0;font-size:.92em}
@@ -284,6 +287,10 @@ figure{margin:1.5em 0;text-align:center}figcaption{font-size:.85em;color:var(--s
 hr{height:0;border:0;border-top:1px solid var(--line);margin:1.8em 0}
 details{border:1px solid var(--line);border-radius:6px;padding:9px 13px}
 summary{cursor:pointer}
+[id]{scroll-margin-top:24px}
+.cv-diagram{margin:24px 0;padding:20px 16px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.cv-diagram svg{display:block;margin:auto;height:auto;max-width:none}
+.cv-diagram-error{margin:12px 0 0;font-size:.85em;color:var(--secondary)}
 mark{background:#f4e4ac;padding:0 .12em}
 .cv-slide{background:#fff;color:#222;border:1px solid #ddd;position:relative;aspect-ratio:var(--slide-aspect,16/9);width:100%;overflow:hidden;margin:0 0 30px;box-shadow:0 3px 14px #0001}
 .cv-slide *{box-sizing:border-box}.cv-slide img{max-height:none;margin:0}.cv-slide p{margin:0}
@@ -292,7 +299,7 @@ mark{background:#f4e4ac;padding:0 .12em}
 @media(max-width:680px){main{padding:22px 19px 55px}}
 `
 
-func (a *application) wrapHTMLPreview(content string, presentation bool) string {
+func (a *application) wrapHTMLPreview(content string, presentation bool, script, nonce string) string {
 	mode := "auto"
 	if a.themeMode == 1 {
 		mode = "light"
@@ -305,7 +312,11 @@ func (a *application) wrapHTMLPreview(content string, presentation bool) string 
 	}
 	style := fmt.Sprintf("font-size:%.0fpx;line-height:%.2f;--reader-width:%.0fpx", a.fontSize, a.lineHeight, width)
 	palette := a.palette()
-	return `<!doctype html><html data-theme="` + mode + `" style="--link-light:` + palette.lightLink + `;--link-dark:` + palette.darkLink + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>` + previewCSS + `</style></head><body style="` + style + `"><main>` + content + `</main></body></html>`
+	scriptPolicy := "'none'"
+	if nonce != "" {
+		scriptPolicy = "'nonce-" + nonce + "'"
+	}
+	return `<!doctype html><html data-theme="` + mode + `" style="` + a.themeCSSVariables() + `--link-light:` + palette.lightLink + `;--link-dark:` + palette.darkLink + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src ` + scriptPolicy + `; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>` + previewCSS + codeTokenCSS + `</style></head><body style="` + style + `"><main>` + content + `</main>` + script + `</body></html>`
 }
 
 func (a *application) generateHTMLPreview(d *document) (string, error) {
@@ -322,15 +333,19 @@ func (a *application) generateHTMLPreview(d *document) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return a.wrapHTMLPreview(body, false), nil
+		script, nonce, err := a.markdownScripts(body, d.fragment)
+		if err != nil {
+			return "", err
+		}
+		return a.wrapHTMLPreview(body, false, script, nonce), nil
 	case kindHTML:
 		body, err := a.sanitizePreviewHTML(d.source, d.path, d.scopeRoot)
 		if err != nil {
 			return "", err
 		}
-		return a.wrapHTMLPreview(body, false), nil
+		return a.wrapHTMLPreview(body, false, "", ""), nil
 	case kindOffice:
-		return a.wrapHTMLPreview(d.officeHTML, d.officePresentation), nil
+		return a.wrapHTMLPreview(d.officeHTML, d.officePresentation, "", ""), nil
 	}
 	return "", fmt.Errorf("unsupported preview type")
 }
@@ -347,7 +362,7 @@ func (a *application) openHTMLPreview(d *document) {
 	if a.htmlView == nil {
 		view, err := a.win.NewWebView(mygo.WebViewOptions{
 			Page:            mygo.PageOptions{Untrusted: true},
-			BackgroundColor: "light-dark(#FBFAF7,#202225)",
+			BackgroundColor: a.webBackground(),
 		})
 		if err != nil {
 			a.status = "HTML 视图创建失败：" + err.Error()
@@ -364,6 +379,13 @@ func (a *application) openHTMLPreview(d *document) {
 				e.PreventDefault()
 				if e.UserInitiated {
 					go mygo.Shell.OpenExternal(e.URL)
+				}
+				return
+			}
+			if parsed.Scheme == "catview" && parsed.Host == "open" {
+				e.PreventDefault()
+				if e.UserInitiated && a.doc != nil {
+					a.openPreviewLink(parsed.Query().Get("path"), parsed.Query().Get("fragment"), a.doc.scopeRoot)
 				}
 				return
 			}

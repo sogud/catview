@@ -6,10 +6,10 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'nonce-__NONCE__'; object-src 'none'; connect-src 'none'; frame-src 'none'; form-action 'none'; base-uri 'none'">
 <title>CatView EPUB</title>
 <style>
-:root{color-scheme:light dark;--paper:#FBFAF7;--ink:#2B3034;--muted:#69747B;--line:#E0E4E1;--link:var(--link-light,#526C7B)}
-@media(prefers-color-scheme:dark){:root{--paper:#202225;--ink:#EDF0F1;--muted:#ABB3B9;--line:#3C4144;--link:var(--link-dark,#B6CAD5)}}
-:root[data-theme=light]{color-scheme:light;--paper:#FBFAF7;--ink:#2B3034;--muted:#69747B;--line:#E0E4E1;--link:var(--link-light,#526C7B)}
-:root[data-theme=dark]{color-scheme:dark;--paper:#202225;--ink:#EDF0F1;--muted:#ABB3B9;--line:#3C4144;--link:var(--link-dark,#B6CAD5)}
+:root{color-scheme:light dark;--paper:var(--paper-light,#FBFAF7);--ink:var(--ink-light,#2B3034);--muted:var(--muted-light,#69747B);--line:var(--line-light,#E0E4E1);--link:var(--link-light,#526C7B)}
+@media(prefers-color-scheme:dark){:root{--paper:var(--paper-dark,#202225);--ink:var(--ink-dark,#EDF0F1);--muted:var(--muted-dark,#ABB3B9);--line:var(--line-dark,#3C4144);--link:var(--link-dark,#B6CAD5)}}
+:root[data-theme=light]{color-scheme:light;--paper:var(--paper-light,#FBFAF7);--ink:var(--ink-light,#2B3034);--muted:var(--muted-light,#69747B);--line:var(--line-light,#E0E4E1);--link:var(--link-light,#526C7B)}
+:root[data-theme=dark]{color-scheme:dark;--paper:var(--paper-dark,#202225);--ink:var(--ink-dark,#EDF0F1);--muted:var(--muted-dark,#ABB3B9);--line:var(--line-dark,#3C4144);--link:var(--link-dark,#B6CAD5)}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0}
 body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -64,7 +64,8 @@ body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased
     if(!vertical)chapter.style.width='min(100%,'+clamp(Number(width)||800,700,1100)+'px)';
   }
   function setTheme(mode){document.documentElement.dataset.theme=mode===1?'light':mode===2?'dark':'auto'}
-  function setAccent(light,dark){
+  function setAccent(light,dark,colors){
+    if(colors)document.documentElement.style.cssText=colors;
     document.documentElement.style.setProperty('--link-light',light||'#526C7B');
     document.documentElement.style.setProperty('--link-dark',dark||'#B6CAD5');
   }
@@ -126,7 +127,7 @@ body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased
     goTo,nextPage:()=>step(true),previousPage:()=>step(false),
     nextChapter,previousChapter,setFont,setTheme,setLayout,setAccent,position
   });
-  setFont(book.fontSize);setTheme(book.themeMode);setLayout(book.lineHeight,book.readerWidth);setAccent(book.linkLight,book.linkDark);
+  setFont(book.fontSize);setTheme(book.themeMode);setLayout(book.lineHeight,book.readerWidth);setAccent(book.linkLight,book.linkDark,book.colors);
   goTo(book.position?.chapter??0,'',book.position?.fraction??0);
 })();
 </script>

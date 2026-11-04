@@ -3,6 +3,7 @@ module github.com/sogud/catview
 go 1.27.3
 
 require (
+	github.com/ebitengine/purego v0.11.1
 	github.com/egoist/mygo v0.7.3
 	github.com/sogud/translate-kit v0.1.0
 	github.com/yuin/goldmark v1.7.17
@@ -11,7 +12,6 @@ require (
 
 require (
 	github.com/coder/websocket v1.8.15 // indirect
-	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/go-text/typesetting v0.3.5 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect

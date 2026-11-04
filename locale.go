@@ -180,3 +180,43 @@ func init() {
 		localeCatalog["zh-TW"][key] = value
 	}
 }
+
+func init() {
+	entries := map[string][2]string{
+		"Open":                  {"打开", "打開"},
+		"Open with default app": {"用默认应用打开", "以預設應用程式打開"},
+		"New file…":             {"新建文件…", "新增檔案…"},
+		"New folder…":           {"新建文件夹…", "新增資料夾…"},
+		"Rename…":               {"重命名…", "重新命名…"},
+		"Move to Trash…":        {"移到废纸篓…", "移到垃圾桶…"},
+		"Move to Trash":         {"移到废纸篓", "移到垃圾桶"},
+		"Name":                  {"名称", "名稱"}, "Confirm": {"确认", "確認"},
+		"Untitled.txt": {"未命名.txt", "未命名.txt"}, "Untitled folder": {"未命名文件夹", "未命名資料夾"},
+		"Move “%s” to Trash?":                                                       {"将“%s”移到废纸篓？", "將「%s」移到垃圾桶？"},
+		"The item and its contents can be restored from the Trash.":                 {"项目及其中的内容可从废纸篓恢复。", "項目及其中的內容可從垃圾桶復原。"},
+		"Save or discard edits in this item before renaming or moving it to Trash.": {"请先保存或放弃此项目中的未保存编辑，再重命名或移到废纸篓。", "請先儲存或放棄此項目中的編輯，再重新命名或移到垃圾桶。"},
+		"Cannot change files: ":                                                     {"无法修改文件：", "無法修改檔案："},
+		"That name already exists. Choose another name.":                            {"名称已存在，请使用其他名称。", "名稱已存在，請使用其他名稱。"},
+		"Permission denied. Check the folder’s permissions in Finder.":              {"没有操作权限，请在访达中检查文件夹权限。", "沒有操作權限，請在 Finder 中檢查資料夾權限。"},
+		"Diagram could not be rendered. The source is shown below.":                 {"图表暂时无法渲染，以下保留原始代码。", "圖表暫時無法繪製，以下保留原始程式碼。"},
+		"Cannot open link":                                         {"无法打开链接", "無法打開連結"},
+		"The linked file could not be found.":                      {"找不到链接指向的文件。", "找不到連結指向的檔案。"},
+		"The linked file is outside the opened folder.":            {"链接文件不在已打开的文件夹内，请先打开其所在文件夹。", "連結檔案不在已開啟的資料夾內，請先開啟其所在資料夾。"},
+		"This link does not point to a file.":                      {"此链接没有指向文件。", "此連結沒有指向檔案。"},
+		"The item no longer exists. Refresh the folder.":           {"项目已不存在，请刷新文件夹。", "項目已不存在，請重新整理資料夾。"},
+		"Enter a name without slashes, colons, or line breaks.":    {"请输入不含斜杠、冒号或换行的名称。", "請輸入不含斜線、冒號或換行的名稱。"},
+		"The parent is no longer a folder.":                        {"上级路径已不再是文件夹。", "上層路徑已不再是資料夾。"},
+		"The item changed outside CatView. Refresh and try again.": {"项目已被其他程序替换，请刷新后再试。", "項目已被其他程式取代，請重新整理後再試。"},
+		"Color theme": {"配色主题", "配色主題"}, "Paper": {"纸白", "紙白"},
+		"The selected folder changed. Close this dialog and try again.": {"当前文件夹已切换，请关闭对话框后重试。", "目前資料夾已切換，請關閉對話框後重試。"},
+		"Forest": {"森林", "森林"}, "Lavender": {"薰衣草", "薰衣草"}, "Sand": {"砂岩", "砂岩"},
+		"Purple": {"柔紫", "柔紫"}, "Amber": {"琥珀", "琥珀"}, "Teal": {"青绿", "青綠"},
+		"Rose": {"玫瑰", "玫瑰"}, "Orange": {"暖橘", "暖橘"},
+		"Theme preview": {"主题预览", "主題預覽"}, "Reading preview": {"中文与 English，安静地阅读。", "中文與 English，安靜地閱讀。"},
+		"Open and read.": {"打开，即读。", "打開，即讀。"}, "Link": {"链接", "連結"},
+	}
+	for key, pair := range entries {
+		localeCatalog["zh-CN"][key] = pair[0]
+		localeCatalog["zh-TW"][key] = pair[1]
+	}
+}

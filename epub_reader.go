@@ -33,6 +33,7 @@ type epubPayload struct {
 	ThemeMode   int          `json:"themeMode"`
 	LineHeight  float32      `json:"lineHeight"`
 	ReaderWidth float32      `json:"readerWidth"`
+	Colors      string       `json:"colors"`
 	LinkLight   string       `json:"linkLight"`
 	LinkDark    string       `json:"linkDark"`
 	Position    epubPosition `json:"position"`
@@ -94,11 +95,11 @@ func (a *application) writeEPUBPosition(bookFile string, pos epubPosition) {
 	_ = os.Rename(temp.Name(), filename)
 }
 
-func renderEPUBHTML(book *epubBook, fontSize float32, themeMode int, lineHeight, readerWidth float32, linkLight, linkDark string, position epubPosition) (string, error) {
+func renderEPUBHTML(book *epubBook, fontSize float32, themeMode int, lineHeight, readerWidth float32, linkLight, linkDark, colors string, position epubPosition) (string, error) {
 	payload, err := json.Marshal(epubPayload{
 		epubBook: book, FontSize: fontSize, ThemeMode: themeMode,
 		LineHeight: lineHeight, ReaderWidth: readerWidth,
-		LinkLight: linkLight, LinkDark: linkDark, Position: position,
+		LinkLight: linkLight, LinkDark: linkDark, Colors: colors, Position: position,
 	})
 	if err != nil {
 		return "", err
@@ -120,7 +121,7 @@ func (a *application) openEPUB(d *document) {
 	a.closeEPUB()
 	page, err := a.win.NewWebView(mygo.WebViewOptions{
 		Page:            mygo.PageOptions{Untrusted: true},
-		BackgroundColor: "light-dark(#FBFAF7,#202225)",
+		BackgroundColor: a.webBackground(),
 	})
 	if err != nil {
 		a.status = "EPUB 视图无法创建：" + err.Error()
@@ -128,7 +129,7 @@ func (a *application) openEPUB(d *document) {
 	}
 	palette := a.palette()
 	html, err := renderEPUBHTML(d.book, a.fontSize, a.themeMode, a.lineHeight, a.preferredTextWidth(),
-		palette.lightLink, palette.darkLink, a.readEPUBPosition(d.path))
+		palette.lightLink, palette.darkLink, a.themeCSSVariables(), a.readEPUBPosition(d.path))
 	if err != nil {
 		page.Destroy()
 		a.status = "EPUB 页面无法生成：" + err.Error()
@@ -222,7 +223,8 @@ func (a *application) epubSetAccent() {
 	if errLight != nil || errDark != nil {
 		return
 	}
-	a.epubCommand("setAccent", string(light), string(dark))
+	colors, _ := json.Marshal(a.themeCSSVariables())
+	a.epubCommand("setAccent", string(light), string(dark), string(colors))
 }
 
 func (a *application) epubSetLayout() {

@@ -27,6 +27,11 @@ type application struct {
 	shownStatus       string
 	closePrompt       bool
 	checkingUpdate    bool
+	fileOperation     bool
+	filePrompt        *mygo.Window
+	settingsTab       int
+	colorTheme        string
+	preferencesError  string
 	root              string
 	rootIsFile        bool
 	selected          string
@@ -88,6 +93,11 @@ var accentPalettes = [...]accentPalette{
 	{"Graphite", "#73818A", "#E0E5E7", "#41494D", "#526C7B", "#B6CAD5"},
 	{"Blue", "#6588A0", "#DCE7EE", "#3C505D", "#4A728B", "#A6C8DE"},
 	{"Green", "#75957C", "#E0E9E1", "#405247", "#4F7861", "#ADD0B9"},
+	{"Purple", "#9380AE", "#E8E1F0", "#4D425E", "#76538F", "#D0B5EC"},
+	{"Amber", "#AE8A56", "#EEE5D7", "#564A36", "#80602E", "#DEC397"},
+	{"Teal", "#648F91", "#DEEAEA", "#395354", "#3C7478", "#A0D2D1"},
+	{"Rose", "#B17F89", "#F0E1E5", "#5B414A", "#965469", "#E7B1C1"},
+	{"Orange", "#B3866B", "#F1E4DA", "#594739", "#905F3C", "#E2B995"},
 }
 
 func (a *application) palette() accentPalette {
@@ -114,26 +124,18 @@ func (a *application) theme(c *ui.Context) *ui.Theme {
 	p := a.palette()
 	var selection ui.Color
 	if t.Dark {
-		// The reading surface remains neutral; only selected controls
-		// take the muted chosen accent.
-		t.Background = ui.Hex("#202225")
-		t.Surface = ui.Hex("#2A2C2F")
-		t.SurfaceHover = ui.Hex("#36393C")
-		t.SurfacePressed = ui.Hex("#414549")
-		t.Border = ui.Hex("#3C4144")
-		t.Text = ui.Hex("#EDF0F1")
-		t.TextMuted = ui.Hex("#ABB3B9")
 		selection = ui.Hex(p.darkSelection)
 	} else {
-		t.Background = ui.Hex("#FBFAF7")
-		t.Surface = ui.Hex("#F1F2F1")
-		t.SurfaceHover = ui.Hex("#E7EAE8")
-		t.SurfacePressed = ui.Hex("#DBE0DD")
-		t.Border = ui.Hex("#E0E4E1")
-		t.Text = ui.Hex("#2B3034")
-		t.TextMuted = ui.Hex("#69747B")
 		selection = ui.Hex(p.lightSelection)
 	}
+	colors := a.colors(t.Dark)
+	t.Background = ui.Hex(colors.paper)
+	t.Surface = ui.Hex(colors.surface)
+	t.Text = ui.Hex(colors.ink)
+	t.TextMuted = ui.Hex(colors.muted)
+	t.Border = ui.Hex(colors.border)
+	t.SurfaceHover = t.Surface.Mix(t.Text, 0.06)
+	t.SurfacePressed = t.Surface.Mix(t.Text, 0.11)
 	t.Accent = selection
 	t.AccentHover = selection.Mix(t.Text, 0.09)
 	t.AccentPressed = selection.Mix(t.Text, 0.17)
@@ -154,7 +156,6 @@ func (a *application) view(c *ui.Context) {
 	t := c.Theme()
 	root := ui.Column(c).Fill().AlignItems(ui.Stretch).Background(t.Background)
 	root.Children(func() {
-		a.toolbar(c)
 		if a.sidebarVisible {
 			pane := ui.Split(c, &a.sidebarWidth, func() { a.sidebar(c) }, func() { a.documentPane(c) }).Grow(1)
 			if pane.Changed() {
@@ -253,12 +254,12 @@ func (a *application) toolbar(c *ui.Context) {
 		Background(t.Surface).
 		DragWindow().Children(func() {
 		ui.Toolbar(c, func() {
-			if ui.Button(c, "").Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
+			if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
 				ui.Icon(c, sidebarGlyph).FontSize(18)
 			}).Clicked() {
 				a.toggleSidebar()
 			}
-			if ui.Button(c, "").Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
+			if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
 				ui.Icon(c, openGlyph).FontSize(18)
 			}).Clicked() {
 				a.choose(true)
@@ -273,6 +274,7 @@ func (a *application) toolbar(c *ui.Context) {
 func (a *application) sidebar(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Fill().AlignItems(ui.Stretch).Background(t.Surface).Children(func() {
+		a.toolbar(c)
 		if a.root == "" {
 			return
 		}
@@ -292,6 +294,7 @@ func (a *application) sidebar(c *ui.Context) {
 				}
 				ui.Text(c, filepath.Base(path)).SingleLine().Grow(1).Tooltip(path)
 			})
+			row.ContextMenu(func(m *ui.Menu) { a.fileContextMenu(m, path) })
 			// Only the content handles this click; the sibling disclosure arrow
 			// keeps Outline's built-in behavior, including Option-click.
 			if isFolder && row.Clicked() {
@@ -304,7 +307,7 @@ func (a *application) sidebar(c *ui.Context) {
 				a.fileOutline.List.Focus(c)
 				a.toggleFolder(path)
 			}
-		}).Grow(1).Padding(7, 6)
+		}).Grow(1).Padding(7, 6).ContextMenu(func(m *ui.Menu) { a.folderContextMenu(m, a.scopeRoot()) })
 
 		if a.fileRow < 0 || a.fileRow >= a.fileOutline.Rows() {
 			return
@@ -381,9 +384,10 @@ func (a *application) reader(c *ui.Context) {
 				d.md.Theme = &markdown.Theme{
 					FontSize: a.fontSize, LineHeight: a.lineHeight,
 					Link: a.linkColor(t.Dark), BlockSpacing: 1.1,
+					CodeSize: 1, CodeBlockBackground: t.Background,
 				}
 				ui.Scroll(c).Grow(1).Padding(30, 38).Children(func() {
-					ui.Column(c).MaxWidth(a.preferredTextWidth()).AlignSelf(ui.Center).Children(func() {
+					ui.Column(c).FillWidth().MaxWidth(a.preferredTextWidth()).AlignSelf(ui.Center).Children(func() {
 						markdown.View(c, d.source, &d.md)
 					})
 				})
@@ -431,7 +435,7 @@ func (a *application) codeView(c *ui.Context, d *document) {
 	if d.code == nil {
 		return
 	}
-	d.code.ReadOnly = !d.editing
+	d.code.ReadOnly = !d.editing || a.fileOperation
 	d.code.Font.Size = a.fontSize
 	d.code.LineHeight = a.lineHeight
 	editor.View(c, d.code).Grow(1).FillWidth()
@@ -445,6 +449,9 @@ func (a *application) infoView(c *ui.Context, heading, detail string) {
 }
 
 func (a *application) choose(directory bool) {
+	if a.fileOperation {
+		return
+	}
 	win := a.win
 	go func() {
 		title := a.tr("Choose a file")
@@ -464,6 +471,9 @@ func (a *application) choose(directory bool) {
 }
 
 func (a *application) toggleEditing() {
+	if a.fileOperation {
+		return
+	}
 	d := a.doc
 	if d == nil || !d.canEdit() {
 		return
@@ -478,6 +488,7 @@ func (a *application) toggleEditing() {
 }
 
 func (a *application) refreshTree() {
+	a.fileRow = -1
 	a.treeVersion++
 	a.folders = make(map[string][]fileEntry)
 	a.folderErrors = make(map[string]string)
@@ -499,6 +510,7 @@ func (a *application) adjustFont(delta float32) {
 
 func (a *application) setAppearance(mode int) {
 	a.themeMode = mode
+	a.applySystemAppearance()
 	a.epubSetTheme()
 	a.storePreferences()
 	a.win.Invalidate()
@@ -525,7 +537,7 @@ func (a *application) syncMenu() {
 	}{
 		{"updates", !a.checkingUpdate},
 		{"edit", canEdit},
-		{"save", editing && dirty},
+		{"save", editing && dirty && !a.fileOperation},
 		{"reveal", d != nil},
 		{"refresh", a.root != "" && !a.rootIsFile},
 		{"find", d != nil && d.code != nil && (d.kind == kindText || d.editing)},
@@ -618,6 +630,7 @@ func (a *application) installMenu() {
 }
 
 type savedPreferences struct {
+	ColorTheme     string   `json:"color_theme,omitempty"`
 	Language       string   `json:"language,omitempty"`
 	SidebarVisible bool     `json:"sidebar_visible"`
 	SidebarWidth   float32  `json:"sidebar_width"`
@@ -652,6 +665,7 @@ func (a *application) loadPreferences() {
 		return
 	}
 	a.language = p.Language
+	a.colorTheme = p.ColorTheme
 	a.sidebarVisible = p.SidebarVisible
 	if p.SidebarWidth >= 160 && p.SidebarWidth <= 440 {
 		a.sidebarWidth = p.SidebarWidth
@@ -662,7 +676,7 @@ func (a *application) loadPreferences() {
 	if p.FileIconStyle == 0 || p.FileIconStyle == 1 {
 		a.fileIconStyle = p.FileIconStyle
 	}
-	if p.AccentIndex >= 0 && p.AccentIndex < 3 {
+	if p.AccentIndex >= 0 && p.AccentIndex < len(accentPalettes) {
 		a.accentIndex = p.AccentIndex
 	}
 	if p.FontSize >= 12 && p.FontSize <= 24 {
@@ -696,21 +710,47 @@ func (a *application) storePreferences() {
 	if path == "" {
 		return
 	}
-	p := savedPreferences{Language: a.language,
+	p := savedPreferences{Language: a.language, ColorTheme: a.colorTheme,
 		SidebarVisible: a.sidebarVisible, SidebarWidth: a.sidebarWidth,
 		ThemeMode: a.themeMode, AccentIndex: a.accentIndex, FontSize: a.fontSize,
 		LineHeight: a.lineHeight, ReadingWidth: a.readingWidth,
 		RecentFolders: a.recentFolders, FileIconStyle: a.fileIconStyle,
 	}
+	a.preferencesError = ""
 	data, err := json.Marshal(p)
-	if err != nil {
-		return
+	if err == nil {
+		err = writePreferences(path, data)
 	}
-	_ = os.WriteFile(path, data, 0600)
+	if err != nil {
+		a.preferencesError = a.tr("Could not save settings") + ": " + err.Error()
+	}
+}
+
+func writePreferences(path string, data []byte) error {
+	file, err := os.CreateTemp(filepath.Dir(path), ".appearance-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.Write(data); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(file.Name(), path)
 }
 
 func (a *application) guardClose() {
 	a.win.OnClose(func(ev *mygo.CloseEvent) {
+		if a.fileOperation {
+			ev.PreventDefault()
+			if a.filePrompt != nil {
+				a.filePrompt.Focus()
+			}
+			return
+		}
 		for _, d := range a.tabs {
 			if documentModified(d) || d.saving {
 				ev.PreventDefault()
@@ -725,6 +765,7 @@ func main() {
 	app := newApplication()
 	mygo.App.WhenReady(func() {
 		app.loadPreferences()
+		app.applySystemAppearance()
 		app.resolveLanguage()
 		app.loadTranslationSettings()
 		app.win = mygo.NewWindow(mygo.WindowOptions{

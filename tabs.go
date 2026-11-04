@@ -8,10 +8,14 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+var closeTabGlyph = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m3 3 6 6M9 3 3 9"/></svg>`))
+
 func (a *application) documentPane(c *ui.Context) {
 	ui.Column(c).Fill().AlignItems(ui.Stretch).Children(func() {
 		if len(a.tabs) > 0 {
 			a.tabBar(c)
+		} else if !a.sidebarVisible {
+			a.toolbar(c)
 		}
 		a.reader(c)
 	})
@@ -20,32 +24,52 @@ func (a *application) documentPane(c *ui.Context) {
 func (a *application) tabBar(c *ui.Context) {
 	t := c.Theme()
 	var closing *document
-	ui.ScrollHorizontal(c).Height(36).FillWidth().Background(t.Surface).Children(func() {
-		tabs := ui.TabsBase(c, &a.activeTab, len(a.tabs))
-		tabs.List.Gap(0).Children(func() {
-			for i, d := range a.tabs {
-				tab := tabs.Tab(i).Width(190).Height(36).Padding(4, 10).Label(filepath.Base(d.path)).Tooltip(d.path)
-				if d == a.doc {
-					tab.Background(t.Background)
+	height := max(float32(32), c.TitleBar().Height)
+	ui.Row(c).Height(height).FillWidth().DragWindow().Background(t.Background).Children(func() {
+		if !a.sidebarVisible {
+			ui.Row(c).Width(c.TitleBar().Left+46).Height(height).Padding(0, 4, 0, c.TitleBar().Left+8).AlignItems(ui.Center).Children(func() {
+				if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Show sidebar")).Children(func() { ui.Icon(c, sidebarGlyph).FontSize(18) }).Clicked() {
+					a.toggleSidebar()
 				}
-				tab.Children(func() {
-					ui.Row(c).Fill().AlignItems(ui.Center).Gap(6).Children(func() {
-						name := filepath.Base(d.path)
-						if documentModified(d) {
-							name = "• " + name
+			})
+		}
+		ui.ScrollHorizontal(c).Height(height).Grow(1).Children(func() {
+			tabs := ui.TabsBase(c, &a.activeTab, len(a.tabs))
+			tabs.List.Gap(0).Children(func() {
+				for i, d := range a.tabs {
+					tab := ui.Row(c).Key(d.path).Width(190).Height(height).Padding(0, 8).Gap(4).AlignItems(ui.Center)
+					if d == a.doc {
+						tab.Background(t.Background)
+					} else {
+						tab.Background(t.Surface)
+					}
+					tab.Children(func() {
+						tabs.Tab(i).Grow(1).MinWidth(0).Height(height).Padding(0, 2).AlignItems(ui.Center).Label(filepath.Base(d.path)).Tooltip(d.path).Children(func() {
+							name := filepath.Base(d.path)
+							if documentModified(d) {
+								name = "• " + name
+							}
+							ui.Text(c, name).SingleLine().Grow(1).MinWidth(0)
+						})
+						// A sibling button remains independently accessible and cannot
+						// select a tab when the user only means to close it.
+						close := ui.ButtonBase(c).Size(22, 22).Padding(0).Center().Radius(4).
+							Label(a.tr("Close tab") + " " + filepath.Base(d.path)).Tooltip(a.tr("Close tab"))
+						if close.Hovered() {
+							close.Background(t.SurfaceHover)
 						}
-						ui.Text(c, name).SingleLine().Grow(1)
-						if ui.Button(c, "×").Size(22, 22).Label(a.tr("Close tab") + " " + filepath.Base(d.path)).Tooltip(a.tr("Close tab")).Clicked() {
+						close.Children(func() { ui.Icon(c, closeTabGlyph).FontSize(12) })
+						if close.Clicked() {
 							closing = d
 						}
 					})
-				})
+				}
+			})
+			if tabs.List.Changed() && a.activeTab >= 0 && a.activeTab < len(a.tabs) {
+				a.loadSerial++
+				a.activateDocument(a.tabs[a.activeTab])
 			}
 		})
-		if tabs.List.Changed() && a.activeTab >= 0 && a.activeTab < len(a.tabs) {
-			a.loadSerial++
-			a.activateDocument(a.tabs[a.activeTab])
-		}
 	})
 	if closing != nil {
 		a.requestCloseTab(closing, false)
@@ -127,7 +151,7 @@ func (a *application) removeTab(d *document) {
 }
 
 func (a *application) requestCloseTab(d *document, closeWindow bool) {
-	if d == nil || a.closePrompt {
+	if d == nil || a.closePrompt || a.fileOperation {
 		return
 	}
 	if d.saving {

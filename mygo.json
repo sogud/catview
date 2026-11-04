@@ -7,12 +7,13 @@
   "out": "build",
   "macos": {
     "infoPlist": {
-      "CFBundleVersion": "0.1.0a2"
+      "CFBundleVersion": "0.1.0a3"
     }
   },
   "resources": [
     "LICENSE",
     "assets/filetype-material-icon-theme-LICENSE.txt",
+    "assets/mermaid-LICENSE.txt",
     "THIRD_PARTY_LICENSES.txt"
   ],
   "copyright": "Copyright (c) 2026 sogud"

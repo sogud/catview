@@ -110,7 +110,6 @@ func (a *application) saveTranslationSettings() {
 	a.translationNotice = a.tr("Saved locally")
 }
 func (a *application) translationSettingsView(c *ui.Context) {
-	ui.Text(c, a.tr("Translation")).FontSize(15).Bold()
 	ui.Form(c, func() {
 		ui.Field(c, a.tr("Provider"), func() {
 			ui.Select(c, &a.translationConfig.Provider, []string{"ai", "google", "google-cloud", "youdao", "libretranslate"}).Label(a.tr("Provider"))
@@ -122,13 +121,15 @@ func (a *application) translationSettingsView(c *ui.Context) {
 		ui.Field(c, a.tr("Model"), func() { ui.TextInput(c, &a.translationConfig.Model).Label(a.tr("Model")) })
 		ui.Field(c, a.tr("API key"), func() { ui.TextInput(c, &a.translationConfig.Key).Password().Label(a.tr("API key")) })
 	})
-	ui.Text(c, a.tr("Only explicit translation sends text to the selected provider. Google and Youdao web services are unofficial.")).FontSize(11).TextColor(c.Theme().TextMuted)
-	ui.Text(c, a.tr("Keys are saved locally as plain text with user-only file permissions, not in Keychain.")).FontSize(11).TextColor(c.Theme().TextMuted)
-	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-		if ui.Button(c, a.tr("Save")).Clicked() {
+	ui.Column(c).Gap(6).Children(func() {
+		ui.Text(c, a.tr("Only explicit translation sends text to the selected provider. Google and Youdao web services are unofficial.")).FontSize(11).TextColor(c.Theme().TextMuted)
+		ui.Text(c, a.tr("Keys are saved locally as plain text with user-only file permissions, not in Keychain.")).FontSize(11).TextColor(c.Theme().TextMuted)
+	})
+	ui.Row(c).FillWidth().Gap(12).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, a.translationNotice).Grow(1).FontSize(11).TextColor(c.Theme().TextMuted)
+		if ui.Button(c, a.tr("Save")).MinWidth(76).Height(30).Clicked() {
 			a.saveTranslationSettings()
 		}
-		ui.Text(c, a.translationNotice).FontSize(11).TextColor(c.Theme().TextMuted)
 	})
 }
 func canTranslate(d *document) bool {
@@ -320,9 +321,9 @@ func (a *application) translationReader(c *ui.Context, d *document) bool {
 		return false
 	}
 	state.md.LoadImage = d.md.LoadImage
-	state.md.Theme = &markdown.Theme{FontSize: a.fontSize, LineHeight: a.lineHeight, Link: a.linkColor(c.Theme().Dark), BlockSpacing: 1.1}
+	state.md.Theme = &markdown.Theme{FontSize: a.fontSize, LineHeight: a.lineHeight, Link: a.linkColor(c.Theme().Dark), BlockSpacing: 1.1, CodeSize: 1, CodeBlockBackground: c.Theme().Background}
 	ui.Scroll(c).Grow(1).Padding(30, 38).Children(func() {
-		ui.Column(c).MaxWidth(a.preferredTextWidth()).AlignSelf(ui.Center).Gap(20).Children(func() {
+		ui.Column(c).FillWidth().MaxWidth(a.preferredTextWidth()).AlignSelf(ui.Center).Gap(20).Children(func() {
 			if state.mode == 2 {
 				ui.Text(c, a.tr("Original")).Bold()
 				// Separate options prevent original and translated render state collision.

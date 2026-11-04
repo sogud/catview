@@ -55,6 +55,7 @@ type document struct {
 	picture            ui.ImageSource
 	md                 markdown.Options
 	htmlRich           bool
+	fragment           string
 	officeHTML         string
 	officePresentation bool
 	officeLegacy       bool
@@ -219,15 +220,26 @@ func pathInScope(root, path string) bool {
 }
 
 func (a *application) openDocument(path string) {
+	a.openDocumentAt(path, a.scopeRoot(), "")
+}
+
+func (a *application) openDocumentAt(path, scopeRoot, fragment string) {
 	path = filepath.Clean(path)
 	for _, d := range a.tabs {
 		if d.path == path {
 			a.loadSerial++
+			if fragment != "" && d.kind == kindMarkdown {
+				d.fragment = fragment
+				d.htmlRich = true
+			}
 			a.activateDocument(d)
+			if fragment != "" && d.kind == kindMarkdown {
+				a.openHTMLPreview(d)
+			}
 			return
 		}
 	}
-	if !a.inScope(path) {
+	if !pathInScope(scopeRoot, path) {
 		a.restoreSelectedFileRow()
 		a.status = "拒绝打开所选目录之外的文件"
 		return
@@ -236,7 +248,6 @@ func (a *application) openDocument(path string) {
 	a.loadSerial++
 	serial := a.loadSerial
 	epoch := a.loadEpoch
-	scopeRoot := a.scopeRoot()
 	win := a.win
 	go func() {
 		d, err := readDocument(path)
@@ -262,7 +273,9 @@ func (a *application) openDocument(path string) {
 				}
 			}
 			d.scopeRoot = scopeRoot
+			d.fragment = fragment
 			if d.kind == kindMarkdown {
+				d.htmlRich = d.htmlRich || fragment != ""
 				d.md.LoadImage = localImageLoader(path, scopeRoot)
 			}
 			a.tabs = append(a.tabs, d)
@@ -384,7 +397,7 @@ func (a *application) openPDF(path string) {
 	if a.pdf == nil {
 		web, err := a.win.NewWebView(mygo.WebViewOptions{
 			Page:            mygo.PageOptions{Untrusted: true},
-			BackgroundColor: "light-dark(#FBFAF7,#202225)",
+			BackgroundColor: a.webBackground(),
 		})
 		if err != nil {
 			a.status = "PDF 视图创建失败：" + err.Error()
@@ -438,6 +451,9 @@ func (a *application) cancelEditing() {
 }
 
 func (a *application) saveDocument() {
+	if a.fileOperation {
+		return
+	}
 	d := a.doc
 	if d == nil || d.saving || !d.canEdit() || !d.editing || d.code == nil || !d.code.Buffer.Modified() {
 		return
