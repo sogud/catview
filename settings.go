@@ -71,6 +71,8 @@ func (a *application) settingsView(c *ui.Context) {
 					a.readingSettings(c)
 				case 2:
 					a.translationSettingsView(c)
+				case 3:
+					a.updateSettings(c)
 				}
 				if a.preferencesError != "" {
 					ui.Text(c, a.preferencesError).TextColor(t.Danger)
@@ -84,12 +86,13 @@ var settingsGlyphs = []*ui.SVG{
 	ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v16"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg>`)),
 	ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h12M9 5v15M5 20h8M15 11h7M18.5 11v9M16 20h5"/></svg>`)),
 	ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18M5 6h14M5 18h14"/></svg>`)),
+	ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7a9 9 0 0 0-15-2L2 8m0-5v5h5M4 17a9 9 0 0 0 15 2l3-3m0 5v-5h-5"/></svg>`)),
 }
 
 func (a *application) settingsNavigation(c *ui.Context) {
 	t := c.Theme()
 	ui.Row(c).Padding(8, 24, 12, 24).Justify(ui.Center).Children(func() {
-		labels := []string{a.tr("Appearance"), a.tr("Reading"), a.tr("Translation")}
+		labels := []string{a.tr("Appearance"), a.tr("Reading"), a.tr("Translation"), a.tr("Updates")}
 		tabs := ui.TabsBase(c, &a.settingsTab, len(labels))
 		tabs.List.Gap(6).Label(a.tr("Settings")).Children(func() {
 			for i, label := range labels {

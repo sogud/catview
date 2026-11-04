@@ -2,13 +2,20 @@
   "name": "CatView",
   "slug": "catview",
   "identifier": "me.sogud.catview",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.5",
   "icon": "assets/app-icon-preview.png",
   "out": "build",
   "macos": {
     "infoPlist": {
-      "CFBundleVersion": "0.1.0a4"
+      "CFBundleShortVersionString": "0.1.0",
+      "CFBundleVersion": "0.1.0a5",
+      "CatViewReleaseVersion": "0.1.0-alpha.5"
     }
+  },
+  "updates": {
+    "publicKey": "drSoki+QADW4imkk9jUs+Ci0ryV6T7cZjBNH52ZVsIk=",
+    "github": "sogud/catview",
+    "deltas": 0
   },
   "resources": [
     "LICENSE",

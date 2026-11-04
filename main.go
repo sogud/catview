@@ -26,7 +26,7 @@ type application struct {
 	menu              *mygo.Menu
 	shownStatus       string
 	closePrompt       bool
-	checkingUpdate    bool
+	updates           updateController
 	fileOperation     bool
 	filePrompt        *mygo.Window
 	settingsTab       int
@@ -191,6 +191,7 @@ func (a *application) view(c *ui.Context) {
 		}
 	}
 	a.syncMenu()
+	a.updateNotice(c)
 	if a.shownStatus != a.status {
 		a.shownStatus = a.status
 		if strings.HasPrefix(a.status, "Cannot") || strings.HasPrefix(a.status, "Could not") || strings.HasPrefix(a.status, "無法") || strings.HasPrefix(a.status, "儲存失敗") || strings.HasPrefix(a.status, "无法") || strings.HasPrefix(a.status, "拒绝") ||
@@ -555,7 +556,6 @@ func (a *application) syncMenu() {
 		id      string
 		enabled bool
 	}{
-		{"updates", !a.checkingUpdate},
 		{"edit", canEdit},
 		{"save", editing && dirty && !a.fileOperation},
 		{"reveal", d != nil},
@@ -784,6 +784,7 @@ func (a *application) guardClose() {
 
 func main() {
 	app := newApplication()
+	mygo.App.SetVersion(releaseVersion)
 	mygo.App.WhenReady(func() {
 		app.loadPreferences()
 		app.applySystemAppearance()
@@ -797,7 +798,9 @@ func main() {
 		})
 		app.installMenu()
 		app.guardClose()
+		app.startUpdates()
 		app.win.OnClosed(func() {
+			app.stopUpdates()
 			for _, d := range app.tabs {
 				cancelTranslation(d)
 			}
