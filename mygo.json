@@ -7,7 +7,7 @@
   "out": "build",
   "macos": {
     "infoPlist": {
-      "CFBundleVersion": "0.1.0a3"
+      "CFBundleVersion": "0.1.0a4"
     }
   },
   "resources": [

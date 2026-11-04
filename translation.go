@@ -112,10 +112,10 @@ func (a *application) saveTranslationSettings() {
 func (a *application) translationSettingsView(c *ui.Context) {
 	ui.Form(c, func() {
 		ui.Field(c, a.tr("Provider"), func() {
-			ui.Select(c, &a.translationConfig.Provider, []string{"ai", "google", "google-cloud", "youdao", "libretranslate"}).Label(a.tr("Provider"))
+			ui.Select(c, &a.translationConfig.Provider, []string{"ai", "google", "google-cloud", "youdao", "libretranslate"}).Width(240).AlignSelf(ui.Start).Label(a.tr("Provider"))
 		})
 		ui.Field(c, a.tr("Target language"), func() {
-			ui.Select(c, &a.translationConfig.Target, []string{"zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es", "pt", "ru"}).Label(a.tr("Target language"))
+			ui.Select(c, &a.translationConfig.Target, []string{"zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es", "pt", "ru"}).Width(240).AlignSelf(ui.Start).Label(a.tr("Target language"))
 		})
 		ui.Field(c, a.tr("Endpoint"), func() { ui.TextInput(c, &a.translationConfig.Endpoint).Label(a.tr("Endpoint")) })
 		ui.Field(c, a.tr("Model"), func() { ui.TextInput(c, &a.translationConfig.Model).Label(a.tr("Model")) })

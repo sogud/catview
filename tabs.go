@@ -11,7 +11,7 @@ import (
 var closeTabGlyph = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m3 3 6 6M9 3 3 9"/></svg>`))
 
 func (a *application) documentPane(c *ui.Context) {
-	ui.Column(c).Fill().AlignItems(ui.Stretch).Children(func() {
+	ui.Column(c).Fill().AlignItems(ui.Stretch).Background(c.Theme().Background).Children(func() {
 		if len(a.tabs) > 0 {
 			a.tabBar(c)
 		} else if !a.sidebarVisible {

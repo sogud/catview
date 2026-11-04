@@ -12,7 +12,7 @@
 - **代码与文本**：Go、TS、JS、Python、JSON、YAML 等语法高亮；默认只读，需要明确切换才可编辑。
 - **PDF / EPUB / 图片**：内嵌阅读；EPUB 支持章节导航、字号与阅读进度保存。
 - **Office**：DOCX/PPTX 基础图文预览，DOC 使用 macOS 系统转换，旧版 PPT 仅预览首页。
-- **外观**：浅色 / 深色 / 跟随系统、6 套明暗成对主题（纸白、GitHub、Nord、森林、薰衣草、砂岩）、8 种强调色、字号、行距、正文宽度；外观/阅读/翻译使用独立设置页。
+- **外观**：默认 macOS 主题，浅色使用白色阅读区与系统半透明侧栏；可选暖白、GitHub、Nord、森林、薰衣草、砂岩，共 7 套明暗成对主题。支持跟随系统、8 种强调色、字号、行距、正文宽度；独立设置窗口使用 macOS 风格的图标分类与紧凑表单。
 
 默认离线阅读，无默认遥测。只有主动选择「翻译 → 翻译文档」并确认服务后，才发送当前 Markdown / TXT 正文；原文件不变。`CatView → 检查更新…` 仅在主动操作时查询 GitHub 发布版本，有新版时可打开官方下载页，不自动安装。
 
@@ -30,7 +30,7 @@
 curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh
 ```
 
-脚本会下载最新版本（包括预览版），校验 SHA-256，把 `CatView.app` 装到「应用程序」（没有写入权限时装到 `~/Applications`）。用这种方式安装不会弹出 Gatekeeper 拦截。指定版本：`curl -fsSL … | VERSION=v0.1.0-alpha.3 sh`；卸载：`curl -fsSL … | sh -s -- --uninstall`（不删设置和数据）。安装前可以先看看[脚本内容](install.sh)。
+脚本会下载最新版本（包括预览版），校验 SHA-256，把 `CatView.app` 装到「应用程序」（没有写入权限时装到 `~/Applications`）。用这种方式安装不会弹出 Gatekeeper 拦截。指定版本：`curl -fsSL … | VERSION=v0.1.0-alpha.4 sh`；卸载：`curl -fsSL … | sh -s -- --uninstall`（不删设置和数据）。安装前可以先看看[脚本内容](install.sh)。
 
 <details>
 <summary>用浏览器下载后提示「无法验证开发者」</summary>
@@ -74,7 +74,7 @@ Markdown 中指向已打开文件夹内其他文件的链接会在新标签打�
 
 ## 从源码构建
 
-翻译依赖固定为已发布的 `github.com/sogud/translate-kit v0.1.0`，Go 会自动下载，无需同级源码目录。v0.1.0-alpha.3 新增文件操作、多主题、Mermaid 和 Markdown 文件/锚点跳转；Alpha 2 可从菜单检查更新，旧版 Alpha 1 用户需手动下载安装一次。
+翻译依赖固定为已发布的 `github.com/sogud/translate-kit v0.1.0`，Go 会自动下载，无需同级源码目录。v0.1.0-alpha.4 新增默认 macOS 主题与系统侧栏材质，优化设置界面并修复切页拉伸；已有主题选择会保留，可在设置中切换到 macOS。Alpha 2 起可从菜单检查更新，旧版 Alpha 1 用户需手动下载安装一次。
 
 在 macOS 上安装 [Go](https://go.dev/)（以 `go.mod` 的版本要求为准）：
 

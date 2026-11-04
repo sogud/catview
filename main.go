@@ -73,6 +73,8 @@ func newApplication() *application {
 		fileRow:        -1,
 		sidebarVisible: true,
 		sidebarWidth:   248,
+		colorTheme:     colorThemes[0].id,
+		accentIndex:    colorThemes[0].accent,
 		fontSize:       15,
 		lineHeight:     1.75,
 		status:         "本地阅读 · 默认只读",
@@ -154,10 +156,22 @@ var (
 func (a *application) view(c *ui.Context) {
 	c.SetTheme(a.theme(c))
 	t := c.Theme()
-	root := ui.Column(c).Fill().AlignItems(ui.Stretch).Background(t.Background)
+	root := ui.Column(c).Fill().AlignItems(ui.Stretch)
 	root.Children(func() {
 		if a.sidebarVisible {
-			pane := ui.Split(c, &a.sidebarWidth, func() { a.sidebar(c) }, func() { a.documentPane(c) }).Grow(1)
+			// Keep Split's drag target, keyboard resizing and focus ring,
+			// without a permanent rule between the two surfaces.
+			splitTheme := *t
+			splitTheme.Border = ui.Transparent
+			c.SetTheme(&splitTheme)
+			pane := ui.Split(c, &a.sidebarWidth, func() {
+				c.SetTheme(t)
+				a.sidebar(c)
+			}, func() {
+				c.SetTheme(t)
+				a.documentPane(c)
+			}).Grow(1)
+			c.SetTheme(t)
 			if pane.Changed() {
 				a.storePreferences()
 			}
@@ -165,6 +179,10 @@ func (a *application) view(c *ui.Context) {
 			a.documentPane(c)
 		}
 	})
+	// SetTheme also paints the root, so clear it after the scoped themes.
+	if a.colorTheme == "macos" && c.Vibrancy() {
+		c.Root().Background(ui.Transparent)
+	}
 	if paths := root.DroppedFiles(); len(paths) > 0 {
 		if info, err := os.Stat(paths[0]); err == nil {
 			a.setRoot(paths[0], info.IsDir())
@@ -247,11 +265,9 @@ func (a *application) toggleSidebar() {
 }
 
 func (a *application) toolbar(c *ui.Context) {
-	t := c.Theme()
 	bar := c.TitleBar()
 	ui.Row(c).Height(max(float32(32), bar.Height)).
 		Padding(0, 12, 0, bar.Left+8).AlignItems(ui.Center).
-		Background(t.Surface).
 		DragWindow().Children(func() {
 		ui.Toolbar(c, func() {
 			if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
@@ -273,7 +289,11 @@ func (a *application) toolbar(c *ui.Context) {
 // navigation while allowing icons before file names in the same sidebar.
 func (a *application) sidebar(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Fill().AlignItems(ui.Stretch).Background(t.Surface).Children(func() {
+	sidebar := ui.Column(c).Fill().AlignItems(ui.Stretch)
+	if a.colorTheme != "macos" || !c.Vibrancy() {
+		sidebar.Background(t.Surface)
+	}
+	sidebar.Children(func() {
 		a.toolbar(c)
 		if a.root == "" {
 			return
@@ -666,6 +686,7 @@ func (a *application) loadPreferences() {
 	}
 	a.language = p.Language
 	a.colorTheme = p.ColorTheme
+	a.colorTheme = a.selectedTheme().id
 	a.sidebarVisible = p.SidebarVisible
 	if p.SidebarWidth >= 160 && p.SidebarWidth <= 440 {
 		a.sidebarWidth = p.SidebarWidth
@@ -771,6 +792,7 @@ func main() {
 		app.win = mygo.NewWindow(mygo.WindowOptions{
 			Title: "CatView", Width: 1120, Height: 750, MinWidth: 680, MinHeight: 440,
 			TitleBarStyle: mygo.TitleBarHidden,
+			Vibrancy:      app.sidebarMaterial(),
 			StateKey:      "main", Content: ui.View(app.view),
 		})
 		app.installMenu()

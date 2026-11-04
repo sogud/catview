@@ -101,7 +101,7 @@ func (a *application) languageSettings(c *ui.Context) {
 		}
 	}
 	ui.Field(c, a.tr("Language"), func() {
-		if ui.Select(c, &selected, labels).Label(a.tr("Language")).Changed() {
+		if ui.Select(c, &selected, labels).Width(240).AlignSelf(ui.Start).Label(a.tr("Language")).Changed() {
 			a.language = "system"
 			for _, language := range uiLanguages {
 				if language.name == selected {
@@ -207,7 +207,7 @@ func init() {
 		"Enter a name without slashes, colons, or line breaks.":    {"请输入不含斜杠、冒号或换行的名称。", "請輸入不含斜線、冒號或換行的名稱。"},
 		"The parent is no longer a folder.":                        {"上级路径已不再是文件夹。", "上層路徑已不再是資料夾。"},
 		"The item changed outside CatView. Refresh and try again.": {"项目已被其他程序替换，请刷新后再试。", "項目已被其他程式取代，請重新整理後再試。"},
-		"Color theme": {"配色主题", "配色主題"}, "Paper": {"纸白", "紙白"},
+		"Color theme": {"配色主题", "配色主題"}, "Paper": {"暖白", "暖白"},
 		"The selected folder changed. Close this dialog and try again.": {"当前文件夹已切换，请关闭对话框后重试。", "目前資料夾已切換，請關閉對話框後重試。"},
 		"Forest": {"森林", "森林"}, "Lavender": {"薰衣草", "薰衣草"}, "Sand": {"砂岩", "砂岩"},
 		"Purple": {"柔紫", "柔紫"}, "Amber": {"琥珀", "琥珀"}, "Teal": {"青绿", "青綠"},
