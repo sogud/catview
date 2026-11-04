@@ -381,13 +381,7 @@ func (a *application) reader(c *ui.Context) {
 	ui.Column(c).Key(a.selected).Fill().AlignItems(ui.Stretch).Background(t.Background).Children(func() {
 		d := a.doc
 		if d == nil {
-			prompt := a.tr("⌘O Open a file")
-			if a.root != "" {
-				prompt = a.tr("Choose a file")
-			}
-			ui.Column(c).Fill().Center().Children(func() {
-				ui.Text(c, prompt).TextColor(t.TextMuted)
-			})
+			a.welcomeView(c)
 			return
 		}
 		if a.translationReader(c, d) {

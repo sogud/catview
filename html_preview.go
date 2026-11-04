@@ -288,7 +288,7 @@ hr{height:0;border:0;border-top:1px solid var(--line);margin:1.8em 0}
 details{border:1px solid var(--line);border-radius:6px;padding:9px 13px}
 summary{cursor:pointer}
 [id]{scroll-margin-top:24px}
-.cv-diagram{margin:24px 0;padding:20px 16px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.cv-diagram{margin:28px 0;padding:12px 8px;overflow:auto;background:transparent}
 .cv-diagram svg{display:block;margin:auto;height:auto;max-width:none}
 .cv-diagram-error{margin:12px 0 0;font-size:.85em;color:var(--secondary)}
 mark{background:#f4e4ac;padding:0 .12em}

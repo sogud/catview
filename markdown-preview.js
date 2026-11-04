@@ -4,13 +4,29 @@
   const diagrams = blocks.map(code => ({ pre: code.parentElement, source: code.textContent }));
   const media = matchMedia('(prefers-color-scheme: dark)');
   let rendering = false, pending = false;
+  function fitDiagram(figure) {
+    const graphic = figure.querySelector('svg');
+    if (!graphic) return;
+    const width = graphic.viewBox.baseVal.width;
+    const available = Math.max(1, figure.clientWidth - 16);
+    // Fit modest charts; keep large charts scrollable at readable text size.
+    if (width > 0) graphic.style.width = (width <= available / 0.75 ? Math.min(width, available) : width) + 'px';
+  }
+  const resize = new ResizeObserver(entries => {
+    for (const entry of entries) fitDiagram(entry.target);
+  });
 
   function theme() {
     const style = getComputedStyle(root);
     const color = name => style.getPropertyValue(name).trim();
     const dark = root.dataset.theme === 'dark' || (root.dataset.theme === 'auto' && media.matches);
-    const paper = color('--paper'), ink = color('--ink'), panel = color('--panel');
-    const line = color('--line'), accent = color('--secondary');
+    const paper = color('--paper');
+    // Match the quiet blue diagrams of Codex in both appearances.
+    const panel = dark ? '#062C4C' : '#E0EDF9';
+    const ink = dark ? '#9CCFFF' : '#006BD6';
+    const border = dark ? '#294D67' : '#D0D9E2';
+    const line = dark ? '#8A929A' : '#8B9299';
+    const label = dark ? '#071B2A' : paper;
     return {
       startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true,
       maxTextSize: 50000, maxEdges: 500, theme: 'base', look: 'classic', htmlLabels: false,
@@ -19,19 +35,25 @@
         'suppressErrorRendering', 'htmlLabels', 'themeCSS', 'fontFamily'],
       themeVariables: {
         darkMode: dark, background: paper, primaryColor: panel, primaryTextColor: ink,
-        primaryBorderColor: accent, lineColor: accent, textColor: ink,
+        primaryBorderColor: border, lineColor: line, textColor: ink,
         secondaryColor: panel, secondaryTextColor: ink, tertiaryColor: paper,
-        tertiaryTextColor: ink, nodeBorder: accent, mainBkg: panel,
-        clusterBkg: paper, clusterBorder: line, edgeLabelBackground: paper,
-        actorBkg: panel, actorBorder: accent, actorTextColor: ink, actorLineColor: line,
-        signalColor: accent, signalTextColor: ink, labelBoxBkgColor: panel,
-        labelBoxBorderColor: line, labelTextColor: ink, loopTextColor: ink,
-        noteBkgColor: panel, noteBorderColor: line, noteTextColor: ink,
-        activationBkgColor: panel, activationBorderColor: accent,
-        fontSize: '14px'
+        tertiaryTextColor: ink, nodeBorder: border, mainBkg: panel,
+        clusterBkg: paper, clusterBorder: border, edgeLabelBackground: label,
+        actorBkg: panel, actorBorder: border, actorTextColor: ink, actorLineColor: border,
+        signalColor: line, signalTextColor: ink, labelBoxBkgColor: label,
+        labelBoxBorderColor: border, labelTextColor: ink, loopTextColor: ink,
+        noteBkgColor: panel, noteBorderColor: border, noteTextColor: ink,
+        activationBkgColor: panel, activationBorderColor: border,
+        fontSize: '15px'
       },
-      flowchart: { htmlLabels: false, curve: 'basis', nodeSpacing: 36, rankSpacing: 48, padding: 14 },
-      sequence: { useMaxWidth: true, mirrorActors: false, actorMargin: 40, messageMargin: 34 }
+      themeCSS: `.nodeLabel,.node .label,.cluster-label,.actor{font-weight:600}
+        .flowchart-link{stroke-width:1.2px;stroke-linecap:round;stroke-linejoin:round}
+        .edgeLabel{color:${ink};font-weight:500}
+        .labelBkg{fill:${label};opacity:1}
+        .messageLine0,.messageLine1{stroke-width:1.2px}
+        .actor-line{stroke-width:1px}`,
+      flowchart: { htmlLabels: false, curve: 'linear', nodeSpacing: 40, rankSpacing: 56, padding: 20 },
+      sequence: { useMaxWidth: true, mirrorActors: false, actorMargin: 44, messageMargin: 36, width: 150, height: 52 }
     };
   }
 
@@ -50,15 +72,23 @@
           figure.setAttribute('aria-label', 'Mermaid');
           figure.innerHTML = svg;
           const graphic = figure.querySelector('svg');
-          if (diagram.figure) diagram.figure.replaceWith(figure);
+          if (graphic) {
+            // Round rectangular nodes, preserving circles, decisions and pills.
+            for (const rect of graphic.querySelectorAll('.node rect, rect.actor')) {
+              if (Number(rect.getAttribute('rx') || 0) <= 6) {
+                rect.setAttribute('rx', '14');
+                rect.setAttribute('ry', '14');
+              }
+            }
+          }
+          if (diagram.figure) {
+            resize.unobserve(diagram.figure);
+            diagram.figure.replaceWith(figure);
+          }
           else diagram.pre.replaceWith(figure);
           diagram.figure = figure;
-          if (graphic) {
-            const width = graphic.viewBox.baseVal.width;
-            const available = figure.clientWidth - 32;
-            // Fit modest charts; keep large charts scrollable at readable text size.
-            if (width > 0) graphic.style.width = (width <= available / 0.75 ? Math.min(width, available) : width) + 'px';
-          }
+          fitDiagram(figure);
+          resize.observe(figure);
         } catch (_) {
           if (!diagram.error) {
             const error = document.createElement('p');
