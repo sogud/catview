@@ -6,7 +6,7 @@ English · [简体中文](README.zh-CN.md)
 
 A lightweight macOS file reader with a native file tree and tabs. Browse documents, code, images and media in one window, without importing them into a library. Built with [MyGo](https://github.com/egoist/mygo), using macOS viewers where they fit.
 
-[Download v0.1.2](https://github.com/sogud/catview/releases/tag/v0.1.2) · [Release notes](CHANGELOG.md) · [Report an issue](https://github.com/sogud/catview/issues) · [MIT license](LICENSE)
+[Download v0.1.3](https://github.com/sogud/catview/releases/tag/v0.1.3) · [Release notes](CHANGELOG.md) · [Report an issue](https://github.com/sogud/catview/issues) · [MIT license](LICENSE)
 
 ![CatView displaying a synthetic calendar example](assets/readme-preview.png)
 
@@ -14,7 +14,7 @@ A lightweight macOS file reader with a native file tree and tabs. Browse documen
 
 **macOS 12 or later · Apple Silicon (arm64).** No Intel build is currently provided. Some decoders require newer macOS versions.
 
-1. Download `CatView-0.1.2-macos-arm64.zip` from [Releases](https://github.com/sogud/catview/releases/tag/v0.1.2).
+1. Download `CatView-0.1.3-macos-arm64.zip` from [Releases](https://github.com/sogud/catview/releases/tag/v0.1.3).
 2. Unzip it and move `CatView.app` to Applications.
 3. If macOS blocks the app, verify its source, then use **System Settings → Privacy & Security → Open Anyway**.
 
@@ -26,7 +26,7 @@ The app is ad-hoc signed, **not Developer ID signed or Apple notarized**. The up
 Read [install.sh](install.sh) before running it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.2 sh
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.3 sh
 ```
 
 The script checks the published SHA-256, installs to `/Applications` (or `~/Applications` when needed), and removes the quarantine attribute. Only run it if you trust the source. Omit `VERSION` to select the newest release, including prereleases.
@@ -58,7 +58,9 @@ Text opens read-only. Choose **File → Edit file** to edit explicitly. Saving c
 | Settings | ⌘, |
 | Close tab / window | ⌘W / ⇧⌘W |
 | Find in source / save edits | ⌘F / ⌘S |
-| Fit image / preview bitmap at 100% | ⌘0 / ⌘1 |
+| Increase / decrease text size (12–48) or image zoom | ⌘+ / ⌘− |
+| Reset text size (15) / fit image | ⌘0 |
+| Preview bitmap at 100% | ⌘1 |
 | Previous / next TIFF or CBZ page | ⌥← / ⌥→ |
 
 The View menu contains source, zoom and system-preview options. Preview failures provide a reason, retry, Open in Default App and Show in Finder.

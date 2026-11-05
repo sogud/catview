@@ -79,7 +79,7 @@ func newApplication() *application {
 		sidebarWidth:   248,
 		colorTheme:     colorThemes[0].id,
 		accentIndex:    colorThemes[0].accent,
-		fontSize:       15,
+		fontSize:       defaultReadingFontSize,
 		lineHeight:     1.75,
 		status:         "本地阅读 · 默认只读",
 	}
@@ -96,14 +96,14 @@ type accentPalette struct {
 }
 
 var accentPalettes = [...]accentPalette{
-	{"Graphite", "#73818A", "#E0E5E7", "#41494D", "#526C7B", "#B6CAD5"},
-	{"Blue", "#6588A0", "#DCE7EE", "#3C505D", "#4A728B", "#A6C8DE"},
-	{"Green", "#75957C", "#E0E9E1", "#405247", "#4F7861", "#ADD0B9"},
-	{"Purple", "#9380AE", "#E8E1F0", "#4D425E", "#76538F", "#D0B5EC"},
-	{"Amber", "#AE8A56", "#EEE5D7", "#564A36", "#80602E", "#DEC397"},
-	{"Teal", "#648F91", "#DEEAEA", "#395354", "#3C7478", "#A0D2D1"},
-	{"Rose", "#B17F89", "#F0E1E5", "#5B414A", "#965469", "#E7B1C1"},
-	{"Orange", "#B3866B", "#F1E4DA", "#594739", "#905F3C", "#E2B995"},
+	{"Graphite", "#98989D", "#E0E5E7", "#41494D", "#526C7B", "#B6CAD5"},
+	{"Blue", "#007AFF", "#DCE7EE", "#3C505D", "#4A728B", "#A6C8DE"},
+	{"Green", "#34C759", "#E0E9E1", "#405247", "#4F7861", "#ADD0B9"},
+	{"Purple", "#AF52DE", "#E8E1F0", "#4D425E", "#76538F", "#D0B5EC"},
+	{"Amber", "#FFCC00", "#EEE5D7", "#564A36", "#80602E", "#DEC397"},
+	{"Teal", "#30B0C7", "#DEEAEA", "#395354", "#3C7478", "#A0D2D1"},
+	{"Rose", "#FF2D55", "#F0E1E5", "#5B414A", "#965469", "#E7B1C1"},
+	{"Orange", "#FF9500", "#F1E4DA", "#594739", "#905F3C", "#E2B995"},
 }
 
 func (a *application) palette() accentPalette {
@@ -229,10 +229,17 @@ func (a *application) toggleSidebar() {
 }
 
 func (a *application) toolbar(c *ui.Context) {
+	original := c.Theme()
+	c.SetTheme(windowChromeTheme(original.Dark))
+	defer c.SetTheme(original)
+	background := c.Theme().Background
+	if a.sidebarVisible && a.colorTheme == "macos" {
+		background = ui.Transparent
+	}
 	bar := c.TitleBar()
 	ui.Row(c).Height(max(float32(32), bar.Height)).
 		Padding(0, 12, 0, bar.Left+8).AlignItems(ui.Center).
-		DragWindow().Children(func() {
+		DragWindow().Background(background).Children(func() {
 		ui.Toolbar(c, func() {
 			if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
 				ui.Icon(c, sidebarGlyph).FontSize(18)
@@ -503,11 +510,26 @@ func (a *application) refreshTree() {
 	a.win.Invalidate()
 }
 
+const (
+	defaultReadingFontSize float32 = 15
+	minReadingFontSize     float32 = 12
+	maxReadingFontSize     float32 = 48
+)
+
 func (a *application) adjustFont(delta float32) {
-	a.fontSize = max(float32(12), min(float32(24), a.fontSize+delta))
-	a.epubSetFont()
-	a.storePreferences()
-	a.win.Invalidate()
+	a.fontSize = max(minReadingFontSize, min(maxReadingFontSize, a.fontSize+delta))
+	a.settingsChanged()
+	if a.settings != nil {
+		a.settings.Invalidate()
+	}
+}
+
+func (a *application) resetContentSize() {
+	if a.doc != nil && (a.doc.kind == kindImage || a.doc.kind == kindSVG) {
+		a.zoomImage(0)
+		return
+	}
+	a.adjustFont(defaultReadingFontSize - a.fontSize)
 }
 
 func (a *application) setAppearance(mode int) {
@@ -542,7 +564,7 @@ func (a *application) syncMenu() {
 		{"reveal", d != nil},
 		{"refresh", a.root != "" && !a.rootIsFile},
 		{"find", d != nil && !d.systemPreview && d.code != nil && (d.kind == kindText || d.editing || d.showSource)},
-		{"image-fit", d != nil && (d.kind == kindImage || d.kind == kindSVG)},
+		{"image-fit", d != nil},
 		{"image-size", d != nil && (d.kind == kindImage || d.kind == kindSVG)},
 		{"preview-source", d != nil && !d.systemPreview && !d.loading && (d.kind == kindTable || d.kind == kindDocument || d.formatted != nil) && !d.editing && d.code != nil},
 		{"system-preview", canUseSystemPreview(d)},
@@ -638,7 +660,7 @@ func (a *application) installMenu() {
 			mygo.Separator(),
 			{Label: a.tr("Zoom in / increase text size"), Accelerator: "CmdOrCtrl+Plus", Click: action(func() { a.adjustContentSize(1) })},
 			{Label: a.tr("Zoom out / decrease text size"), Accelerator: "CmdOrCtrl+-", Click: action(func() { a.adjustContentSize(-1) })},
-			{ID: "image-fit", Label: a.tr("Fit image to window"), Accelerator: "CmdOrCtrl+0", Click: action(func() { a.zoomImage(0) })},
+			{ID: "image-fit", Label: a.tr("Reset text size / fit image"), Accelerator: "CmdOrCtrl+0", Click: action(a.resetContentSize)},
 			{ID: "image-size", Label: a.tr("Image at 100%"), Accelerator: "CmdOrCtrl+1", Click: action(func() { a.zoomImage(1) })},
 			{ID: "preview-source", Label: a.tr("Show source"), Type: mygo.MenuItemCheckbox, Click: action(a.togglePreviewSource)},
 			{ID: "system-preview", Label: a.tr("System preview"), Type: mygo.MenuItemCheckbox, Click: action(a.toggleSystemPreview)},
@@ -705,7 +727,7 @@ func (a *application) loadPreferences() {
 	if p.AccentIndex >= 0 && p.AccentIndex < len(accentPalettes) {
 		a.accentIndex = p.AccentIndex
 	}
-	if p.FontSize >= 12 && p.FontSize <= 24 {
+	if p.FontSize >= minReadingFontSize && p.FontSize <= maxReadingFontSize {
 		a.fontSize = p.FontSize
 	}
 	if p.LineHeight >= 1.4 && p.LineHeight <= 2 {

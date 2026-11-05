@@ -22,7 +22,10 @@ func (a *application) documentPane(c *ui.Context) {
 }
 
 func (a *application) tabBar(c *ui.Context) {
-	t := c.Theme()
+	original := c.Theme()
+	t := windowChromeTheme(original.Dark)
+	c.SetTheme(t)
+	defer c.SetTheme(original)
 	var closing *document
 	height := max(float32(32), c.TitleBar().Height)
 	ui.Row(c).Height(height).FillWidth().DragWindow().Background(t.Background).Children(func() {

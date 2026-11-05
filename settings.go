@@ -147,13 +147,13 @@ func (a *application) appearanceSettings(c *ui.Context) {
 		})
 		ui.Field(c, a.tr("Accent color"), func() {
 			picker := ui.SegmentedBase(c, &a.accentIndex, len(accentPalettes))
-			picker.Track.AlignItems(ui.Center).Gap(3).Label(a.tr("Accent color")).Children(func() {
+			picker.Track.AlignItems(ui.Center).Gap(5).Label(a.tr("Accent color")).Children(func() {
 				for i, palette := range accentPalettes {
-					chip := picker.Segment(i).Size(32, 30).Radius(6).Label(a.tr(palette.name)).Tooltip(a.tr(palette.name))
+					chip := picker.Segment(i).Size(34, 34).Padding(4).Center().Radius(17).Label(a.tr(palette.name)).Tooltip(a.tr(palette.name))
 					if i == a.accentIndex {
-						chip.Background(t.SurfaceHover).Border(1, t.TextMuted)
+						chip.Border(2, ui.Hex(palette.swatch))
 					}
-					chip.Children(func() { ui.Box(c).Size(16, 16).Radius(8).Background(ui.Hex(palette.swatch)) })
+					chip.Children(func() { ui.Box(c).Size(24, 24).Radius(12).Background(ui.Hex(palette.swatch)) })
 				}
 			})
 			if picker.Track.Changed() {
@@ -188,7 +188,7 @@ func (a *application) readingSettings(c *ui.Context) {
 		ui.Field(c, a.tr("Font size"), func() {
 			fontSize := float64(a.fontSize)
 			ui.Row(c).AlignItems(ui.Center).Gap(10).Children(func() {
-				if ui.StepSlider(c, &fontSize, 12, 24, 1).Label(a.tr("Font size")).Grow(1).Changed() {
+				if ui.StepSlider(c, &fontSize, float64(minReadingFontSize), float64(maxReadingFontSize), 1).Label(a.tr("Font size")).Grow(1).Changed() {
 					a.fontSize = float32(fontSize)
 					a.settingsChanged()
 				}

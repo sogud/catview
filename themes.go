@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/ui"
 )
 
 type surfaceColors struct {
@@ -30,7 +31,7 @@ var colorThemes = []colorTheme{
 
 func (a *application) sidebarMaterial() mygo.Vibrancy {
 	if a.colorTheme == "macos" {
-		return mygo.VibrancySidebar
+		return mygo.VibrancyGlass
 	}
 	return mygo.VibrancyNone
 }
@@ -85,4 +86,14 @@ func (a *application) webBackground() string {
 		return a.colors(true).paper
 	}
 	return "light-dark(" + a.colors(false).paper + "," + a.colors(true).paper + ")"
+}
+
+// Window chrome stays neutral even when the document uses a colored theme.
+func windowChromeTheme(dark bool) *ui.Theme {
+	t := *ui.LightTheme()
+	if dark {
+		t = *ui.DarkTheme()
+	}
+	t.Focus = t.TextMuted.Alpha(0.5)
+	return &t
 }
