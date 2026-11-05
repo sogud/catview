@@ -2,14 +2,14 @@
   "name": "CatView",
   "slug": "catview",
   "identifier": "me.sogud.catview",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "icon": "assets/app-icon-preview.png",
   "out": "build",
   "macos": {
     "infoPlist": {
-      "CFBundleShortVersionString": "0.1.6",
-      "CFBundleVersion": "0.1.6",
-      "CatViewReleaseVersion": "0.1.6",
+      "CFBundleShortVersionString": "0.1.7",
+      "CFBundleVersion": "0.1.7",
+      "CatViewReleaseVersion": "0.1.7",
       "CFBundleDocumentTypes": [
         {
           "CFBundleTypeName": "Markdown",

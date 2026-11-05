@@ -24,11 +24,16 @@ func (a *application) documentPane(c *ui.Context) {
 func (a *application) tabBar(c *ui.Context) {
 	original := c.Theme()
 	t := windowChromeTheme(original.Dark)
+	t.ScrollbarWidth = 3
+	t.Scrollbar = ui.RGBA(0, 0, 0, 0.22)
+	if t.Dark {
+		t.Scrollbar = ui.RGBA(255, 255, 255, 0.26)
+	}
 	c.SetTheme(t)
 	defer c.SetTheme(original)
 	var closing *document
 	height := max(float32(32), c.TitleBar().Height)
-	ui.Row(c).Height(height).FillWidth().Clip().DragWindow().Background(t.Background).Children(func() {
+	ui.Row(c).Height(height + 10).FillWidth().AlignItems(ui.Start).DragWindow().Background(t.Background).Children(func() {
 		if !a.sidebarVisible {
 			ui.Row(c).Width(c.TitleBar().Left+46).Height(height).Padding(0, 4, 0, c.TitleBar().Left+8).AlignItems(ui.Center).Children(func() {
 				if ui.Button(c, "").Size(28, 28).Padding(0).Center().Label(a.tr("Show sidebar")).Children(func() { ui.Icon(c, sidebarGlyph).FontSize(18) }).Clicked() {
@@ -36,16 +41,14 @@ func (a *application) tabBar(c *ui.Context) {
 				}
 			})
 		}
-		// Keep the scrollbar below the clipped tab strip, including its hit area.
-		// Horizontal gestures and keyboard tab navigation remain available.
-		barSpace := max(float32(6), t.ScrollbarWidth) + 6
-		ui.ScrollHorizontal(c).Height(height + barSpace).AlignSelf(ui.Start).Grow(1).Children(func() {
+		// A separate bottom lane keeps the scrollbar and its hit area off labels.
+		ui.ScrollHorizontal(c).Height(height + 10).AlignSelf(ui.Start).Grow(1).Children(func() {
 			tabs := ui.TabsBase(c, &a.activeTab, len(a.tabs))
 			tabs.List.Gap(0).Children(func() {
 				for i, d := range a.tabs {
-					tab := ui.Row(c).Key(d.path).Width(190).Height(height).Padding(0, 8).Gap(4).AlignItems(ui.Center)
+					tab := ui.Row(c).Key(d.path).Width(190).Shrink(0).Height(height).Padding(0, 8).Gap(4).AlignItems(ui.Center)
 					if d == a.doc {
-						tab.Background(t.Background)
+						tab.Background(t.Background).Border(1, t.Border).Radius(4)
 					} else {
 						tab.Background(t.Surface)
 					}

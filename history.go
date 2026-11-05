@@ -57,6 +57,7 @@ func loadOpenHistory(legacy []string) {
 		}
 	}
 	openHistory = clean
+	updateDockHistory()
 }
 func readPreviewBytesNoHistory(path string) ([]byte, error) {
 	info, err := os.Stat(path)
@@ -81,6 +82,7 @@ func recentHistoryFolders() []string {
 	return out
 }
 func (a *application) saveHistory() {
+	defer updateDockHistory()
 	path := historyPath()
 	if path == "" {
 		return
@@ -103,6 +105,7 @@ func (a *application) saveHistory() {
 	}
 }
 func (a *application) rememberOpened(path string, folder bool) {
+	_ = mygo.App.AddRecentDocument(path)
 	items := []openedItem{{Path: path, Folder: folder, Opened: time.Now()}}
 	for _, item := range openHistory {
 		if item.Path != path {
@@ -117,6 +120,7 @@ func (a *application) rememberOpened(path string, folder bool) {
 }
 func (a *application) clearHistory() {
 	openHistory = nil
+	_ = mygo.App.ClearRecentDocuments()
 	a.saveHistory()
 	a.storePreferences()
 }
@@ -208,4 +212,31 @@ func (a *application) showHistory() {
 			a.historyWindow = nil
 		}
 	})
+}
+
+// Dock actions resolve the current reader at click time; never capture a
+// window that could have been closed since this menu was created.
+func updateDockHistory() {
+	label := "Recent items"
+	if activeReader != nil {
+		label = activeReader.tr(label)
+	}
+	var items []*mygo.MenuItem
+	for i, item := range openHistory {
+		if i == 10 {
+			break
+		}
+		entry := item
+		items = append(items, &mygo.MenuItem{Label: filepath.Base(entry.Path), Click: func(_ *mygo.MenuItem, _ *mygo.Window) {
+			if activeReader == nil {
+				newReaderWindow(entry.Path, false)
+			} else {
+				activeReader.openHistoryItem(entry, entry.Folder)
+			}
+		}})
+	}
+	if len(items) == 0 {
+		items = append(items, &mygo.MenuItem{Label: "—", Disabled: true})
+	}
+	mygo.App.Dock.SetMenu(mygo.NewMenu([]*mygo.MenuItem{{Label: label, Submenu: items}}))
 }

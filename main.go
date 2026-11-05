@@ -682,6 +682,7 @@ func (a *application) installMenu() {
 	})
 	if activeReader == a || activeReader == nil {
 		mygo.App.SetMenu(a.menu)
+		updateDockHistory()
 	}
 }
 
@@ -826,6 +827,16 @@ func (a *application) guardClose() {
 }
 
 func main() {
+	mygo.App.OnBeforeQuit(func(e *mygo.QuitEvent) {
+		if err := saveReaderSession(); err != nil {
+			e.PreventDefault()
+			log.Printf("Cannot save window session: %v", err)
+			if activeReader != nil {
+				activeReader.status = activeReader.tr("Cannot save window session") + ": " + err.Error()
+				activeReader.win.Invalidate()
+			}
+		}
+	})
 	var pendingPaths []string
 	ready := false
 	mygo.App.OnOpenFile(func(path string) {
@@ -847,6 +858,9 @@ func main() {
 		ready = true
 		if len(pendingPaths) == 0 && len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
 			pendingPaths = append(pendingPaths, os.Args[1:]...)
+		}
+		if len(pendingPaths) == 0 && restoreReaderSession() {
+			return
 		}
 		first := ""
 		if len(pendingPaths) > 0 {

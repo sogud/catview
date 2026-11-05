@@ -6,7 +6,7 @@ English · [简体中文](README.zh-CN.md)
 
 A lightweight macOS file reader with a native file tree and tabs. Browse documents, code, images and media in one window, without importing them into a library. Built with [MyGo](https://github.com/egoist/mygo), using macOS viewers where they fit.
 
-[Download v0.1.6](https://github.com/sogud/catview/releases/tag/v0.1.6) · [Release notes](CHANGELOG.md) · [Report an issue](https://github.com/sogud/catview/issues) · [MIT license](LICENSE)
+[Download v0.1.7](https://github.com/sogud/catview/releases/tag/v0.1.7) · [Release notes](CHANGELOG.md) · [Report an issue](https://github.com/sogud/catview/issues) · [MIT license](LICENSE)
 
 ![CatView displaying a synthetic calendar example](assets/readme-preview.png)
 
@@ -14,7 +14,7 @@ A lightweight macOS file reader with a native file tree and tabs. Browse documen
 
 **macOS 12 or later · Apple Silicon (arm64).** No Intel build is currently provided. Some decoders require newer macOS versions.
 
-1. Download `CatView-0.1.6-macos-arm64.zip` from [Releases](https://github.com/sogud/catview/releases/tag/v0.1.6).
+1. Download `CatView-0.1.7-macos-arm64.zip` from [Releases](https://github.com/sogud/catview/releases/tag/v0.1.7).
 2. Unzip it and move `CatView.app` to Applications.
 3. If macOS blocks the app, verify its source, then use **System Settings → Privacy & Security → Open Anyway**.
 
@@ -26,7 +26,7 @@ The app is ad-hoc signed, **not Developer ID signed or Apple notarized**. The up
 Read [install.sh](install.sh) before running it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.6 sh
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.7 sh
 ```
 
 The script checks the published SHA-256, installs to `/Applications` (or `~/Applications` when needed), and removes the quarantine attribute. Only run it if you trust the source. Omit `VERSION` to select the newest release, including prereleases.
@@ -40,6 +40,8 @@ curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh 
 </details>
 
 ## Use
+
+Normal quit saves open folders and tabs for the next launch without an explicit file argument. Unsaved edits still use save/discard prompts. The Dock menu includes recent items. Window positions and crash recovery are not restored.
 
 Choose separate reading and code fonts in **Settings → Reading**. Fonts come from your Mac; the code picker lists monospaced families. Changes apply to Markdown, code, HTML and EPUB, without changing fixed-layout PDF or Quick Look documents.
 
