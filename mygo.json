@@ -2,14 +2,14 @@
   "name": "CatView",
   "slug": "catview",
   "identifier": "me.sogud.catview",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "icon": "assets/app-icon-preview.png",
   "out": "build",
   "macos": {
     "infoPlist": {
-      "CFBundleShortVersionString": "0.1.1",
-      "CFBundleVersion": "0.1.1",
-      "CatViewReleaseVersion": "0.1.1"
+      "CFBundleShortVersionString": "0.1.2",
+      "CFBundleVersion": "0.1.2",
+      "CatViewReleaseVersion": "0.1.2"
     }
   },
   "updates": {
@@ -23,5 +23,149 @@
     "assets/mermaid-LICENSE.txt",
     "THIRD_PARTY_LICENSES.txt"
   ],
-  "copyright": "Copyright (c) 2026 sogud"
+  "copyright": "Copyright (c) 2026 sogud",
+  "fileAssociations": [
+    {
+      "name": "Markdown",
+      "ext": [
+        "md",
+        "markdown",
+        "mdown"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Text and source code",
+      "ext": [
+        "txt",
+        "log",
+        "json",
+        "xml",
+        "yaml",
+        "yml",
+        "toml",
+        "ini",
+        "conf",
+        "js",
+        "jsx",
+        "ts",
+        "tsx",
+        "go",
+        "py",
+        "rs",
+        "c",
+        "h",
+        "cpp",
+        "hpp",
+        "swift",
+        "java",
+        "sh",
+        "css",
+        "sql"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Web document",
+      "ext": [
+        "html",
+        "htm"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "PDF",
+      "ext": [
+        "pdf"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "EPUB",
+      "ext": [
+        "epub"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Table",
+      "ext": [
+        "csv",
+        "tsv"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Image",
+      "ext": [
+        "png",
+        "jpg",
+        "jpeg",
+        "gif",
+        "webp",
+        "bmp",
+        "heic",
+        "heif",
+        "tif",
+        "tiff",
+        "avif",
+        "ico",
+        "icns",
+        "svg"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Office document",
+      "ext": [
+        "doc",
+        "docx",
+        "ppt",
+        "pptx",
+        "xls",
+        "xlsx",
+        "rtf",
+        "odt",
+        "pages",
+        "numbers",
+        "key"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Mail and calendar",
+      "ext": [
+        "eml",
+        "ics"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Archive",
+      "ext": [
+        "zip",
+        "cbz"
+      ],
+      "role": "Viewer"
+    },
+    {
+      "name": "Audio and video",
+      "ext": [
+        "mp4",
+        "m4v",
+        "mov",
+        "m4a",
+        "mp3",
+        "wav",
+        "aif",
+        "aiff",
+        "aac",
+        "caf",
+        "flac",
+        "ac3",
+        "ec3"
+      ],
+      "role": "Viewer"
+    }
+  ]
 }
