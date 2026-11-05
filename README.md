@@ -1,5 +1,7 @@
 # CatView
 
+English · [简体中文](README.zh-CN.md)
+
 **Open a folder. Read your files.**
 
 A lightweight macOS file reader with a native file tree and tabs. Browse documents, code, images and media in one window, without importing them into a library. Built with [MyGo](https://github.com/egoist/mygo), using macOS viewers where they fit.
