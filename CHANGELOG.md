@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0-alpha.6
+## 0.1.0
 
 - 新增 CSV/TSV 原生表格、JSON/XML 格式化阅读。
 - 图片增加缩放、静态 SVG、HEIC/AVIF/图标、GIF 动画、多页 TIFF 与 CBZ 翻页。
@@ -11,7 +11,7 @@
 
 部分专业图片、音频编码、RAR 变体及 Quick Look 文档依赖系统能力，未逐项实测；MOBI/AZW、DRM、MKV/AVI/WebM 与 TAR.XZ 尚未接入。
 
-macOS 12+ Apple Silicon；临时签名，尚未 Apple 公证。Alpha 5 可自动发现并下载，点击安装并重启后升级。Alpha 4 及更早版本请手动安装 ZIP。
+首个正式版本。macOS 12+ Apple Silicon；临时签名，尚未 Apple 公证。Alpha 5 可自动发现并下载，点击安装并重启后升级。Alpha 4 及更早版本请手动安装 ZIP。
 
 ## 0.1.0-alpha.5
 
