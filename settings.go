@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -108,7 +107,7 @@ func (a *application) settingsNavigation(c *ui.Context) {
 				color := t.TextMuted
 				if i == a.settingsTab {
 					color = t.Accent
-					tab.Material(glass.Glass{Interactive: true})
+					tab.Background(t.Surface).Border(1, t.Border)
 				} else if tab.Hovered() {
 					tab.Background(t.SurfaceHover)
 				}
@@ -127,7 +126,7 @@ func (a *application) appearanceSettings(c *ui.Context) {
 	t := c.Theme()
 	ui.Form(c, func() {
 		ui.Field(c, a.tr("Appearance"), func() {
-			if glassSegmented(c, &a.themeMode, a.tr("System"), a.tr("Light"), a.tr("Dark")).AlignSelf(ui.Start).Label(a.tr("Appearance")).Changed() {
+			if ui.Segmented(c, &a.themeMode, a.tr("System"), a.tr("Light"), a.tr("Dark")).AlignSelf(ui.Start).Label(a.tr("Appearance")).Changed() {
 				a.settingsChanged()
 			}
 		})
@@ -137,7 +136,7 @@ func (a *application) appearanceSettings(c *ui.Context) {
 			for _, theme := range colorThemes {
 				names = append(names, a.tr(theme.name))
 			}
-			if ui.Select(c, &selected, names).Width(240).AlignSelf(ui.Start).Radius(12).Material(glass.Glass{Interactive: true}).Label(a.tr("Color theme")).Changed() {
+			if ui.Select(c, &selected, names).Width(240).AlignSelf(ui.Start).Label(a.tr("Color theme")).Changed() {
 				for _, theme := range colorThemes {
 					if a.tr(theme.name) == selected {
 						a.colorTheme = theme.id
@@ -156,7 +155,6 @@ func (a *application) appearanceSettings(c *ui.Context) {
 					if i == a.accentIndex {
 						chip.Border(2, ui.Hex(palette.swatch))
 					}
-					chip.Material(glass.Glass{Interactive: true})
 					chip.Children(func() { ui.Box(c).Size(24, 24).Radius(12).Background(ui.Hex(palette.swatch)) })
 				}
 			})
@@ -166,7 +164,7 @@ func (a *application) appearanceSettings(c *ui.Context) {
 		})
 		a.languageSettings(c)
 		ui.Field(c, a.tr("File icons"), func() {
-			if glassSegmented(c, &a.fileIconStyle, a.tr("System"), "Material").AlignSelf(ui.Start).Label(a.tr("File icons")).Changed() {
+			if ui.Segmented(c, &a.fileIconStyle, a.tr("System"), "Material").AlignSelf(ui.Start).Label(a.tr("File icons")).Changed() {
 				a.systemIcons = nil
 				a.settingsChanged()
 			}
@@ -210,7 +208,7 @@ func (a *application) readingSettings(c *ui.Context) {
 			})
 		})
 		ui.Field(c, a.tr("Text width"), func() {
-			if glassSegmented(c, &a.readingWidth, a.tr("Standard"), a.tr("Wide")).AlignSelf(ui.Start).Label(a.tr("Text width")).Changed() {
+			if ui.Segmented(c, &a.readingWidth, a.tr("Standard"), a.tr("Wide")).AlignSelf(ui.Start).Label(a.tr("Text width")).Changed() {
 				a.settingsChanged()
 			}
 		})
@@ -227,19 +225,4 @@ func (a *application) preferredTextWidth() float32 {
 		return 1000
 	}
 	return 800
-}
-
-// Keep native keyboard and accessibility semantics while styling the segments.
-func glassSegmented(c *ui.Context, selected *int, labels ...string) ui.Element {
-	parts := ui.SegmentedBase(c, selected, len(labels))
-	parts.Track.Gap(3).Padding(3).Radius(14).Material(glass.Glass{}).Children(func() {
-		for i, label := range labels {
-			segment := parts.Segment(i).Padding(5, 12).Radius(11).Label(label)
-			if i == *selected {
-				segment.Material(glass.Glass{Interactive: true})
-			}
-			segment.Children(func() { ui.Text(c, label) })
-		}
-	})
-	return parts.Track
 }

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -32,7 +31,7 @@ func (a *application) tabBar(c *ui.Context) {
 	ui.Row(c).Height(height).FillWidth().DragWindow().Background(t.Background).Children(func() {
 		if !a.sidebarVisible {
 			ui.Row(c).Width(c.TitleBar().Left+46).Height(height).Padding(0, 4, 0, c.TitleBar().Left+8).AlignItems(ui.Center).Children(func() {
-				if ui.ButtonBase(c).Size(28, 28).Padding(0).Center().Radius(14).Material(glass.Glass{Interactive: true}).Label(a.tr("Show sidebar")).Children(func() { ui.Icon(c, sidebarGlyph).FontSize(18) }).Clicked() {
+				if ui.Button(c, "").Size(28, 28).Padding(0).Center().Label(a.tr("Show sidebar")).Children(func() { ui.Icon(c, sidebarGlyph).FontSize(18) }).Clicked() {
 					a.toggleSidebar()
 				}
 			})

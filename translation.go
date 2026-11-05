@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/markdown"
 	translatekit "github.com/sogud/translate-kit"
@@ -113,10 +112,10 @@ func (a *application) saveTranslationSettings() {
 func (a *application) translationSettingsView(c *ui.Context) {
 	ui.Form(c, func() {
 		ui.Field(c, a.tr("Provider"), func() {
-			ui.Select(c, &a.translationConfig.Provider, []string{"ai", "google", "google-cloud", "youdao", "libretranslate"}).Width(240).AlignSelf(ui.Start).Radius(12).Material(glass.Glass{Interactive: true}).Label(a.tr("Provider"))
+			ui.Select(c, &a.translationConfig.Provider, []string{"ai", "google", "google-cloud", "youdao", "libretranslate"}).Width(240).AlignSelf(ui.Start).Label(a.tr("Provider"))
 		})
 		ui.Field(c, a.tr("Target language"), func() {
-			ui.Select(c, &a.translationConfig.Target, []string{"zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es", "pt", "ru"}).Width(240).AlignSelf(ui.Start).Radius(12).Material(glass.Glass{Interactive: true}).Label(a.tr("Target language"))
+			ui.Select(c, &a.translationConfig.Target, []string{"zh-CN", "zh-TW", "en", "ja", "ko", "fr", "de", "es", "pt", "ru"}).Width(240).AlignSelf(ui.Start).Label(a.tr("Target language"))
 		})
 		ui.Field(c, a.tr("Endpoint"), func() { ui.TextInput(c, &a.translationConfig.Endpoint).Label(a.tr("Endpoint")) })
 		ui.Field(c, a.tr("Model"), func() { ui.TextInput(c, &a.translationConfig.Model).Label(a.tr("Model")) })
@@ -128,7 +127,7 @@ func (a *application) translationSettingsView(c *ui.Context) {
 	})
 	ui.Row(c).FillWidth().Gap(12).AlignItems(ui.Center).Children(func() {
 		ui.Text(c, a.translationNotice).Grow(1).FontSize(11).TextColor(c.Theme().TextMuted)
-		if ui.Button(c, a.tr("Save")).MinWidth(76).Height(30).Radius(15).Material(glass.Glass{Interactive: true}).Clicked() {
+		if ui.Button(c, a.tr("Save")).MinWidth(76).Height(30).Clicked() {
 			a.saveTranslationSettings()
 		}
 	})

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/markdown"
@@ -245,12 +244,12 @@ func (a *application) toolbar(c *ui.Context) {
 		Padding(0, 12, 0, bar.Left+8).AlignItems(ui.Center).
 		DragWindow().Background(background).Children(func() {
 		ui.Toolbar(c, func() {
-			if ui.ButtonBase(c).Size(28, 28).Padding(0).Center().Radius(14).Material(glass.Glass{Interactive: true}).Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
+			if ui.Button(c, "").Size(28, 28).Padding(0).Center().Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
 				ui.Icon(c, sidebarGlyph).FontSize(18)
 			}).Clicked() {
 				a.toggleSidebar()
 			}
-			if ui.ButtonBase(c).Size(28, 28).Padding(0).Center().Radius(14).Material(glass.Glass{Interactive: true}).Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
+			if ui.Button(c, "").Size(28, 28).Padding(0).Center().Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
 				ui.Icon(c, openGlyph).FontSize(18)
 			}).Clicked() {
 				a.choose(true)
@@ -824,11 +823,13 @@ func main() {
 			pendingPaths = append(pendingPaths, path)
 			return
 		}
-		if activeReader == nil {
-			newReaderWindow(path, false)
-		} else if info, err := os.Stat(path); err == nil {
-			activeReader.setRoot(path, info.IsDir())
-			activeReader.win.Focus()
+		if info, err := os.Stat(path); err == nil {
+			if info.IsDir() || activeReader == nil {
+				newReaderWindow(path, false)
+			} else {
+				activeReader.setRoot(path, false)
+				activeReader.win.Focus()
+			}
 		}
 	})
 	mygo.App.SetVersion(releaseVersion)
@@ -847,7 +848,11 @@ func main() {
 				continue
 			}
 			if info, err := os.Stat(path); err == nil {
-				app.setRoot(path, info.IsDir())
+				if info.IsDir() {
+					newReaderWindow(path, false)
+				} else {
+					app.setRoot(path, false)
+				}
 			}
 		}
 		pendingPaths = nil

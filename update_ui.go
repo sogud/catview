@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
-	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -154,7 +153,7 @@ func (a *application) updateSettings(c *ui.Context) {
 		if u.busy || u.phase == "ready" || u.phase == "available" {
 			label = a.updateStatus()
 		}
-		if ui.Button(c, label).AlignSelf(ui.Start).Radius(14).Material(glass.Glass{Interactive: true}).Clicked() {
+		if ui.Button(c, label).AlignSelf(ui.Start).Clicked() {
 			a.checkForUpdates()
 		}
 	})

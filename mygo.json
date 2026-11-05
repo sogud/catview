@@ -2,14 +2,177 @@
   "name": "CatView",
   "slug": "catview",
   "identifier": "me.sogud.catview",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "icon": "assets/app-icon-preview.png",
   "out": "build",
   "macos": {
     "infoPlist": {
-      "CFBundleShortVersionString": "0.1.4",
-      "CFBundleVersion": "0.1.4",
-      "CatViewReleaseVersion": "0.1.4"
+      "CFBundleShortVersionString": "0.1.5",
+      "CFBundleVersion": "0.1.5",
+      "CatViewReleaseVersion": "0.1.5",
+      "CFBundleDocumentTypes": [
+        {
+          "CFBundleTypeName": "Markdown",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "md",
+            "markdown",
+            "mdown"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Text and source code",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "txt",
+            "log",
+            "json",
+            "xml",
+            "yaml",
+            "yml",
+            "toml",
+            "ini",
+            "conf",
+            "js",
+            "jsx",
+            "ts",
+            "tsx",
+            "go",
+            "py",
+            "rs",
+            "c",
+            "h",
+            "cpp",
+            "hpp",
+            "swift",
+            "java",
+            "sh",
+            "css",
+            "sql"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Web document",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "html",
+            "htm"
+          ]
+        },
+        {
+          "CFBundleTypeName": "PDF",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "pdf"
+          ]
+        },
+        {
+          "CFBundleTypeName": "EPUB",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "epub"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Table",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "csv",
+            "tsv"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Image",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "webp",
+            "bmp",
+            "heic",
+            "heif",
+            "tif",
+            "tiff",
+            "avif",
+            "ico",
+            "icns",
+            "svg"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Office document",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "doc",
+            "docx",
+            "ppt",
+            "pptx",
+            "xls",
+            "xlsx",
+            "rtf",
+            "odt",
+            "pages",
+            "numbers",
+            "key"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Mail and calendar",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "eml",
+            "ics"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Archive",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "zip",
+            "cbz"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Audio and video",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "CFBundleTypeExtensions": [
+            "mp4",
+            "m4v",
+            "mov",
+            "m4a",
+            "mp3",
+            "wav",
+            "aif",
+            "aiff",
+            "aac",
+            "caf",
+            "flac",
+            "ac3",
+            "ec3"
+          ]
+        },
+        {
+          "CFBundleTypeName": "Folder",
+          "CFBundleTypeRole": "Viewer",
+          "LSHandlerRank": "Alternate",
+          "LSItemContentTypes": [
+            "public.folder"
+          ]
+        }
+      ]
     }
   },
   "updates": {
@@ -23,149 +186,5 @@
     "assets/mermaid-LICENSE.txt",
     "THIRD_PARTY_LICENSES.txt"
   ],
-  "copyright": "Copyright (c) 2026 sogud",
-  "fileAssociations": [
-    {
-      "name": "Markdown",
-      "ext": [
-        "md",
-        "markdown",
-        "mdown"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Text and source code",
-      "ext": [
-        "txt",
-        "log",
-        "json",
-        "xml",
-        "yaml",
-        "yml",
-        "toml",
-        "ini",
-        "conf",
-        "js",
-        "jsx",
-        "ts",
-        "tsx",
-        "go",
-        "py",
-        "rs",
-        "c",
-        "h",
-        "cpp",
-        "hpp",
-        "swift",
-        "java",
-        "sh",
-        "css",
-        "sql"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Web document",
-      "ext": [
-        "html",
-        "htm"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "PDF",
-      "ext": [
-        "pdf"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "EPUB",
-      "ext": [
-        "epub"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Table",
-      "ext": [
-        "csv",
-        "tsv"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Image",
-      "ext": [
-        "png",
-        "jpg",
-        "jpeg",
-        "gif",
-        "webp",
-        "bmp",
-        "heic",
-        "heif",
-        "tif",
-        "tiff",
-        "avif",
-        "ico",
-        "icns",
-        "svg"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Office document",
-      "ext": [
-        "doc",
-        "docx",
-        "ppt",
-        "pptx",
-        "xls",
-        "xlsx",
-        "rtf",
-        "odt",
-        "pages",
-        "numbers",
-        "key"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Mail and calendar",
-      "ext": [
-        "eml",
-        "ics"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Archive",
-      "ext": [
-        "zip",
-        "cbz"
-      ],
-      "role": "Viewer"
-    },
-    {
-      "name": "Audio and video",
-      "ext": [
-        "mp4",
-        "m4v",
-        "mov",
-        "m4a",
-        "mp3",
-        "wav",
-        "aif",
-        "aiff",
-        "aac",
-        "caf",
-        "flac",
-        "ac3",
-        "ec3"
-      ],
-      "role": "Viewer"
-    }
-  ]
+  "copyright": "Copyright (c) 2026 sogud"
 }

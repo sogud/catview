@@ -6,7 +6,7 @@
 
 一个轻量的 macOS 本地文件阅读器，提供原生文件树和多标签页。在同一窗口浏览文档、代码、图片与媒体，无需导入资料库。基于 [MyGo](https://github.com/egoist/mygo) 构建，按需复用 macOS 系统预览能力。
 
-[下载 v0.1.4](https://github.com/sogud/catview/releases/tag/v0.1.4) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/sogud/catview/issues) · [MIT 协议](LICENSE)
+[下载 v0.1.5](https://github.com/sogud/catview/releases/tag/v0.1.5) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/sogud/catview/issues) · [MIT 协议](LICENSE)
 
 ![CatView 展示合成日历示例](assets/readme-preview.png)
 
@@ -14,7 +14,7 @@
 
 **macOS 12 或更新版本 · Apple Silicon（arm64）。** 暂无 Intel 安装包。部分解码能力需要较新的 macOS。
 
-1. 从 [Releases](https://github.com/sogud/catview/releases/tag/v0.1.4) 下载 `CatView-0.1.4-macos-arm64.zip`。
+1. 从 [Releases](https://github.com/sogud/catview/releases/tag/v0.1.5) 下载 `CatView-0.1.5-macos-arm64.zip`。
 2. 解压，将 `CatView.app` 拖入「应用程序」。
 3. 若 macOS 阻止打开，请先确认来源，再到「系统设置 → 隐私与安全性」选择「仍要打开」。
 
@@ -26,7 +26,7 @@
 执行前请先阅读 [install.sh](install.sh)：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.4 sh
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.5 sh
 ```
 
 脚本核对发布的 SHA-256，安装到 `/Applications`，必要时使用 `~/Applications`，并移除 quarantine 标记。请仅在信任来源时运行。不指定 `VERSION` 时选择最新版本，可能包含预发布版。
@@ -40,6 +40,8 @@ curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh 
 </details>
 
 ## 使用
+
+将文件夹拖到 Dock 中的 CatView 图标，每个文件夹会在新窗口打开，保留已有窗口和标签。
 
 在 Finder 中通过「打开方式 → CatView」打开文件。若要设为某类文件的默认应用，选择「显示简介 → 打开方式 → 全部更改」。CatView 不会自动修改默认应用。
 
