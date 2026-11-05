@@ -40,6 +40,7 @@ type application struct {
 	doc               *document
 	tabs              []*document
 	activeTab         int
+	tabRevealDocument *document
 	folders           map[string][]fileEntry
 	folderErrors      map[string]string
 	folderLoading     map[string]bool
