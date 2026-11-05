@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/markdown"
@@ -96,14 +97,14 @@ type accentPalette struct {
 }
 
 var accentPalettes = [...]accentPalette{
-	{"Graphite", "#98989D", "#E0E5E7", "#41494D", "#526C7B", "#B6CAD5"},
-	{"Blue", "#007AFF", "#DCE7EE", "#3C505D", "#4A728B", "#A6C8DE"},
-	{"Green", "#34C759", "#E0E9E1", "#405247", "#4F7861", "#ADD0B9"},
-	{"Purple", "#AF52DE", "#E8E1F0", "#4D425E", "#76538F", "#D0B5EC"},
-	{"Amber", "#FFCC00", "#EEE5D7", "#564A36", "#80602E", "#DEC397"},
-	{"Teal", "#30B0C7", "#DEEAEA", "#395354", "#3C7478", "#A0D2D1"},
-	{"Rose", "#FF2D55", "#F0E1E5", "#5B414A", "#965469", "#E7B1C1"},
-	{"Orange", "#FF9500", "#F1E4DA", "#594739", "#905F3C", "#E2B995"},
+	{"Graphite", "#98989D", "#6C6C70", "#6C6C70", "#59595E", "#C7C7CC"},
+	{"Blue", "#007AFF", "#007AFF", "#0A84FF", "#0066CC", "#64B5FF"},
+	{"Green", "#34C759", "#248A3D", "#248A3D", "#248A3D", "#6DDE86"},
+	{"Purple", "#AF52DE", "#8944AB", "#8944AB", "#8944AB", "#D3A0F2"},
+	{"Amber", "#FFCC00", "#FFCC00", "#FFD60A", "#806000", "#FFD60A"},
+	{"Teal", "#30B0C7", "#087E8B", "#087E8B", "#087E8B", "#6AD5E8"},
+	{"Rose", "#FF2D55", "#D91D46", "#D91D46", "#C8173D", "#FF8FA5"},
+	{"Orange", "#FF9500", "#FF9500", "#FF9F0A", "#995000", "#FFB85C"},
 }
 
 func (a *application) palette() accentPalette {
@@ -145,7 +146,10 @@ func (a *application) theme(c *ui.Context) *ui.Theme {
 	t.Accent = selection
 	t.AccentHover = selection.Mix(t.Text, 0.09)
 	t.AccentPressed = selection.Mix(t.Text, 0.17)
-	t.AccentText = t.Text
+	t.AccentText = ui.Hex("#FFFFFF")
+	if a.accentIndex == 4 || a.accentIndex == 7 {
+		t.AccentText = ui.Hex("#1D1D1F")
+	}
 	t.Selection = a.linkColor(t.Dark).Alpha(0.25)
 	t.Focus = a.linkColor(t.Dark).Alpha(0.50)
 	t.Spacing = 3.5
@@ -241,12 +245,12 @@ func (a *application) toolbar(c *ui.Context) {
 		Padding(0, 12, 0, bar.Left+8).AlignItems(ui.Center).
 		DragWindow().Background(background).Children(func() {
 		ui.Toolbar(c, func() {
-			if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
+			if ui.ButtonBase(c).Size(28, 28).Padding(0).Center().Radius(14).Material(glass.Glass{Interactive: true}).Label(a.tr("Show sidebar")).Tooltip(a.tr("Toggle sidebar ⌘B")).Children(func() {
 				ui.Icon(c, sidebarGlyph).FontSize(18)
 			}).Clicked() {
 				a.toggleSidebar()
 			}
-			if ui.Button(c, "").Size(28, 28).Padding(0).Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
+			if ui.ButtonBase(c).Size(28, 28).Padding(0).Center().Radius(14).Material(glass.Glass{Interactive: true}).Label(a.tr("Open folder…")).Tooltip(a.tr("Open folder ⇧⌘O")).Children(func() {
 				ui.Icon(c, openGlyph).FontSize(18)
 			}).Clicked() {
 				a.choose(true)

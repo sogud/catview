@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/egoist/mygo/plugins/glass"
 	"github.com/egoist/mygo/ui"
 	"strings"
 )
@@ -101,7 +102,7 @@ func (a *application) languageSettings(c *ui.Context) {
 		}
 	}
 	ui.Field(c, a.tr("Language"), func() {
-		if ui.Select(c, &selected, labels).Width(240).AlignSelf(ui.Start).Label(a.tr("Language")).Changed() {
+		if ui.Select(c, &selected, labels).Width(240).AlignSelf(ui.Start).Radius(12).Material(glass.Glass{Interactive: true}).Label(a.tr("Language")).Changed() {
 			a.language = "system"
 			for _, language := range uiLanguages {
 				if language.name == selected {

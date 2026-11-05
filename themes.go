@@ -31,7 +31,7 @@ var colorThemes = []colorTheme{
 
 func (a *application) sidebarMaterial() mygo.Vibrancy {
 	if a.colorTheme == "macos" {
-		return mygo.VibrancyGlass
+		return mygo.VibrancySidebar
 	}
 	return mygo.VibrancyNone
 }
