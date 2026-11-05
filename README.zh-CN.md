@@ -1,5 +1,7 @@
 # CatView
 
+[![Listed on Awesome MyGo](https://awesomemygo.dev/badge.svg)](https://awesomemygo.dev/apps/catview)
+
 [English](README.md) · 简体中文
 
 **打开文件夹，即刻阅读。**
