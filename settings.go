@@ -22,6 +22,7 @@ func (a *application) showSettings() {
 		Content:  ui.View(a.settingsView),
 	})
 	a.settings = win
+	win.OnFocus(func() { activeReader = a; a.installMenu() })
 	win.OnClosed(func() {
 		if a.settings == win {
 			a.settings = nil
@@ -30,8 +31,12 @@ func (a *application) showSettings() {
 }
 
 func (a *application) settingsChanged() {
-	a.applySystemAppearance()
 	a.storePreferences()
+	a.refreshAppearance()
+}
+
+func (a *application) refreshAppearance() {
+	a.applySystemAppearance()
 	if a.win != nil {
 		a.win.SetVibrancy(a.sidebarMaterial())
 		a.win.Invalidate()

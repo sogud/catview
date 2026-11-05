@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,8 +16,20 @@ import (
 	"github.com/egoist/mygo"
 )
 
-// The public release identifier includes the channel; Info.plist requires 0.1.0.
-var releaseVersion = "0.1.0-alpha.5"
+// Keep runtime update comparisons aligned with the packaged release version.
+//
+//go:embed mygo.json
+var packagedConfig []byte
+
+var releaseVersion = func() string {
+	var config struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(packagedConfig, &config); err != nil {
+		panic(err)
+	}
+	return config.Version
+}()
 
 type updatePreferences struct {
 	AutomaticChecks    bool      `json:"automatic_checks"`
@@ -39,7 +52,7 @@ type updateController struct {
 }
 
 func (a *application) startUpdates() {
-	u := &a.updates
+	u := a.updates
 	u.prefs = updatePreferences{AutomaticChecks: true, AutomaticDownloads: true}
 	if dir, err := mygo.App.Path(mygo.PathUserData); err == nil {
 		if data, err := os.ReadFile(filepath.Join(dir, "updates.json")); err == nil {
@@ -60,6 +73,10 @@ func (a *application) startUpdates() {
 				return
 			case <-timer.C:
 				a.win.Update(func() {
+					if updateOwner != a || a.win.IsDestroyed() {
+						return
+					}
+
 					// A downloaded update remains available after restarting offline.
 					_, pending := os.Stat(filepath.Join(u.cacheDir, "pending.json"))
 					if u.prefs.AutomaticChecks && (pending == nil || !time.Now().Before(u.prefs.NextCheck)) {
@@ -73,7 +90,7 @@ func (a *application) startUpdates() {
 }
 
 func (a *application) stopUpdates() {
-	u := &a.updates
+	u := a.updates
 	if u.stop != nil {
 		u.stop()
 	}
@@ -86,6 +103,10 @@ func (a *application) stopUpdates() {
 }
 
 func (a *application) storeUpdatePreferences() {
+	if updateOwner != nil && updateOwner != a {
+		updateOwner.storeUpdatePreferences()
+		return
+	}
 	dir, err := mygo.App.Path(mygo.PathUserData)
 	if err == nil {
 		var data []byte
@@ -106,10 +127,19 @@ func (a *application) refreshUpdateUI() {
 	if a.settings != nil {
 		a.settings.Invalidate()
 	}
-	a.win.Invalidate()
+	for _, reader := range readerWindows {
+		reader.win.Invalidate()
+		if reader.settings != nil {
+			reader.settings.Invalidate()
+		}
+	}
 }
 
 func (a *application) checkForUpdates() {
+	if updateOwner != nil && updateOwner != a {
+		updateOwner.checkForUpdates()
+		return
+	}
 	a.showUpdateWindow()
 	a.beginUpdateCheck()
 }
@@ -127,7 +157,11 @@ func (a *application) updateError(err error) string {
 }
 
 func (a *application) beginUpdateCheck() {
-	u := &a.updates
+	if updateOwner != nil && updateOwner != a {
+		updateOwner.beginUpdateCheck()
+		return
+	}
+	u := a.updates
 	if u.busy || u.phase == "ready" || u.phase == "available" {
 		return
 	}
@@ -152,6 +186,10 @@ func (a *application) beginUpdateCheck() {
 			cached = source.cached() == nil
 		}
 		a.win.Update(func() {
+			if updateOwner != a || a.win.IsDestroyed() {
+				return
+			}
+
 			u.busy, u.cancel = false, nil
 			u.prefs.NextCheck = time.Now().Add(6 * time.Hour)
 			if err != nil {
@@ -190,7 +228,11 @@ func (a *application) beginUpdateCheck() {
 }
 
 func (a *application) downloadUpdate() {
-	u := &a.updates
+	if updateOwner != nil && updateOwner != a {
+		updateOwner.downloadUpdate()
+		return
+	}
+	u := a.updates
 	if u.busy || u.source == nil || u.update == nil {
 		return
 	}
@@ -208,9 +250,19 @@ func (a *application) downloadUpdate() {
 				return
 			}
 			lastProgress = time.Now()
-			a.win.Update(func() { u.downloaded = n; a.refreshUpdateUI() })
+			a.win.Update(func() {
+				if updateOwner != a || a.win.IsDestroyed() {
+					return
+				}
+				u.downloaded = n
+				a.refreshUpdateUI()
+			})
 		})
 		a.win.Update(func() {
+			if updateOwner != a || a.win.IsDestroyed() {
+				return
+			}
+
 			u.busy, u.cancel = false, nil
 			if errors.Is(err, context.Canceled) {
 				u.phase, u.detail = "available", a.tr("Download paused. You can try again later.")
@@ -226,26 +278,35 @@ func (a *application) downloadUpdate() {
 }
 
 func (a *application) installUpdate() {
-	u := &a.updates
+	if updateOwner != nil && updateOwner != a {
+		updateOwner.installUpdate()
+		return
+	}
+	u := a.updates
 	if u.busy || u.phase != "ready" || u.update == nil {
 		return
 	}
 	a.showUpdateWindow()
-	if a.fileOperation || a.closePrompt {
-		u.detail = a.tr("Finish the current file operation before installing.")
-		a.refreshUpdateUI()
-		return
-	}
-	for _, d := range a.tabs {
-		if documentModified(d) || d.saving {
-			u.detail = a.tr("Save or discard unsaved changes before installing the update.")
+	for _, reader := range readerWindows {
+		if reader.fileOperation || reader.closePrompt {
+			u.detail = a.tr("Finish the current file operation before installing.")
 			a.refreshUpdateUI()
 			return
+		}
+		for _, d := range reader.tabs {
+			if documentModified(d) || d.saving {
+				u.detail = a.tr("Save or discard unsaved changes before installing the update.")
+				reader.win.Focus()
+				a.refreshUpdateUI()
+				return
+			}
 		}
 	}
 	// Existing file-operation guards also make all editors read-only while
 	// the verified bundle is staged. No helper is started before this click.
-	a.fileOperation = true
+	for _, reader := range readerWindows {
+		reader.fileOperation = true
+	}
 	u.phase, u.detail, u.busy = "installing", "", true
 	update, source := u.update, u.source
 	a.refreshUpdateUI()
@@ -253,7 +314,14 @@ func (a *application) installUpdate() {
 		err := update.Install(context.Background(), nil)
 		invalidCache := err != nil && source.cached() != nil
 		a.win.Update(func() {
-			a.fileOperation, u.busy = false, false
+			if updateOwner != a || a.win.IsDestroyed() {
+				return
+			}
+
+			for _, reader := range readerWindows {
+				reader.fileOperation = false
+			}
+			u.busy = false
 			u.phase = "ready"
 			if err != nil {
 				u.detail = a.tr(err.Error())

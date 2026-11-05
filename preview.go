@@ -72,6 +72,7 @@ func (a *application) loadDocument(target *document) {
 				target.previewHTML = d.previewHTML
 				target.officePresentation, target.officeLegacy = d.officePresentation, d.officeLegacy
 				target.book = d.book
+				a.rememberOpened(target.path, false)
 				if target.kind == kindMarkdown {
 					target.htmlRich = target.htmlRich || target.fragment != ""
 					target.md.LoadImage = localImageLoader(target.path, target.scopeRoot)

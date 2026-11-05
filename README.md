@@ -6,7 +6,7 @@ English · [简体中文](README.zh-CN.md)
 
 A lightweight macOS file reader with a native file tree and tabs. Browse documents, code, images and media in one window, without importing them into a library. Built with [MyGo](https://github.com/egoist/mygo), using macOS viewers where they fit.
 
-[Download v0.1.0](https://github.com/sogud/catview/releases/tag/v0.1.0) · [Release notes](CHANGELOG.md) · [Report an issue](https://github.com/sogud/catview/issues) · [MIT license](LICENSE)
+[Download v0.1.1](https://github.com/sogud/catview/releases/tag/v0.1.1) · [Release notes](CHANGELOG.md) · [Report an issue](https://github.com/sogud/catview/issues) · [MIT license](LICENSE)
 
 ![CatView displaying a synthetic calendar example](assets/readme-preview.png)
 
@@ -14,7 +14,7 @@ A lightweight macOS file reader with a native file tree and tabs. Browse documen
 
 **macOS 12 or later · Apple Silicon (arm64).** No Intel build is currently provided. Some decoders require newer macOS versions.
 
-1. Download `CatView-0.1.0-macos-arm64.zip` from [Releases](https://github.com/sogud/catview/releases/tag/v0.1.0).
+1. Download `CatView-0.1.1-macos-arm64.zip` from [Releases](https://github.com/sogud/catview/releases/tag/v0.1.1).
 2. Unzip it and move `CatView.app` to Applications.
 3. If macOS blocks the app, verify its source, then use **System Settings → Privacy & Security → Open Anyway**.
 
@@ -26,7 +26,7 @@ The app is ad-hoc signed, **not Developer ID signed or Apple notarized**. The up
 Read [install.sh](install.sh) before running it:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.0 sh
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.1 sh
 ```
 
 The script checks the published SHA-256, installs to `/Applications` (or `~/Applications` when needed), and removes the quarantine attribute. Only run it if you trust the source. Omit `VERSION` to select the newest release, including prereleases.
@@ -40,6 +40,8 @@ curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh 
 </details>
 
 ## Use
+
+**File → New window** (⌘N) or **Open folder in new window** keeps folders and tabs independent. **Recent items** lists ten entries; **Open history** stores up to 100 distinct files/folders locally, with timestamps, opening in another window and clearing history. Tab context menus close other/left/right/all tabs, copy paths or reveal files; batch closing stops when an unsaved-change prompt is cancelled.
 
 Open a file or folder from the welcome screen. Click a folder to expand it and a file to open a tab; opening the same file again reuses its tab. Recent folders are available from the File menu.
 

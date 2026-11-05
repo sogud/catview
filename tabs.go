@@ -43,6 +43,7 @@ func (a *application) tabBar(c *ui.Context) {
 					} else {
 						tab.Background(t.Surface)
 					}
+					tab.ContextMenu(func(m *ui.Menu) { a.tabContextMenu(m, d) })
 					tab.Children(func() {
 						tabs.Tab(i).Grow(1).MinWidth(0).Height(height).Padding(0, 2).AlignItems(ui.Center).Label(filepath.Base(d.path)).Tooltip(d.path).Children(func() {
 							name := filepath.Base(d.path)
@@ -148,18 +149,29 @@ func (a *application) removeTab(d *document) {
 }
 
 func (a *application) requestCloseTab(d *document, closeWindow bool) {
+	if a.closeBatch {
+		return
+	}
+	a.closeTabThen(d, func(closed bool) {
+		if closed && closeWindow {
+			a.win.Close()
+		}
+	})
+}
+
+func (a *application) closeTabThen(d *document, done func(bool)) {
 	if d == nil || a.closePrompt || a.fileOperation {
+		done(false)
 		return
 	}
 	if d.saving {
 		a.status = a.tr("Cannot close while saving. Please try again.")
+		done(false)
 		return
 	}
 	if !documentModified(d) {
 		a.removeTab(d)
-		if closeWindow {
-			a.win.Close()
-		}
+		done(true)
 		return
 	}
 	a.closePrompt = true
@@ -186,9 +198,11 @@ func (a *application) requestCloseTab(d *document, closeWindow bool) {
 			d.saving = false
 			if err != nil {
 				a.status = a.tr("Cannot close: ") + a.tr(err.Error())
+				done(false)
 				return
 			}
 			if res.Button == 2 {
+				done(false)
 				return
 			}
 			if res.Button == 0 {
@@ -201,12 +215,70 @@ func (a *application) requestCloseTab(d *document, closeWindow bool) {
 			// A newer edit must never disappear after the save finishes.
 			if res.Button == 0 && d.code.Buffer.Version() != version {
 				a.status = a.tr("Cannot close: new edits appeared while saving. Save again.")
+				done(false)
 				return
 			}
 			a.removeTab(d)
-			if closeWindow {
-				win.Close()
-			}
+			done(true)
 		})
 	}()
+}
+
+func (a *application) tabContextMenu(m *ui.Menu, target *document) {
+	index := -1
+	for i, d := range a.tabs {
+		if d == target {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return
+	}
+	disabled := a.fileOperation || a.closePrompt || a.closeBatch
+	if m.Item(a.tr("Close tab")).Disabled(disabled).Chosen() {
+		a.requestCloseTab(target, false)
+	}
+	for _, op := range []struct {
+		label       string
+		mode        int
+		unavailable bool
+	}{
+		{"Close other tabs", 0, len(a.tabs) < 2}, {"Close tabs to the left", 1, index == 0}, {"Close tabs to the right", 2, index == len(a.tabs)-1}, {"Close all tabs", 3, false},
+	} {
+		if m.Item(a.tr(op.label)).Disabled(disabled || op.unavailable).Chosen() {
+			var closing []*document
+			for i, d := range a.tabs {
+				if op.mode == 3 || op.mode == 0 && d != target || op.mode == 1 && i < index || op.mode == 2 && i > index {
+					closing = append(closing, d)
+				}
+			}
+			a.closeTabs(closing)
+		}
+	}
+	m.Separator()
+	if m.Item(a.tr("Copy path")).Chosen() {
+		mygo.Clipboard.WriteText(target.path)
+	}
+	if m.Item(a.tr("Show in Finder")).Chosen() {
+		mygo.Shell.ShowItemInFolder(target.path)
+	}
+}
+
+func (a *application) closeTabs(documents []*document) {
+	if a.closeBatch || a.closePrompt || a.fileOperation {
+		return
+	}
+	a.closeBatch = true
+	var next func(bool)
+	next = func(proceed bool) {
+		if !proceed || len(documents) == 0 || a.win.IsDestroyed() {
+			a.closeBatch = false
+			return
+		}
+		d := documents[0]
+		documents = documents[1:]
+		a.closeTabThen(d, next)
+	}
+	next(true)
 }

@@ -29,7 +29,11 @@ func (a *application) updateStatus() string {
 }
 
 func (a *application) showUpdateWindow() {
-	u := &a.updates
+	if updateOwner != nil && updateOwner != a {
+		updateOwner.showUpdateWindow()
+		return
+	}
+	u := a.updates
 	if u.window != nil && !u.window.IsDestroyed() {
 		u.window.Show()
 		u.window.Focus()
@@ -54,7 +58,7 @@ func (a *application) showUpdateWindow() {
 }
 
 func (a *application) updateView(c *ui.Context) {
-	u, t := &a.updates, c.Theme()
+	u, t := a.updates, c.Theme()
 	ui.Column(c).Fill().Padding(24).Gap(14).AlignItems(ui.Stretch).Children(func() {
 		ui.Text(c, a.updateStatus()).FontSize(17).Bold()
 		version := "CatView " + releaseVersion
@@ -124,7 +128,7 @@ func (a *application) updateView(c *ui.Context) {
 }
 
 func (a *application) updateSettings(c *ui.Context) {
-	u := &a.updates
+	u := a.updates
 	ui.Column(c).Gap(16).Children(func() {
 		ui.Text(c, "CatView "+releaseVersion).Bold()
 		if ui.Checkbox(c, &u.prefs.AutomaticChecks, a.tr("Automatically check for updates")).Changed() {
@@ -156,7 +160,7 @@ func (a *application) updateSettings(c *ui.Context) {
 }
 
 func (a *application) updateNotice(c *ui.Context) {
-	u := &a.updates
+	u := a.updates
 	if u.notice {
 		u.notice = false
 		action, perform := a.tr("View update"), a.showUpdateWindow

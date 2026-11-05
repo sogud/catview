@@ -247,6 +247,9 @@ func (a *application) openDocumentAt(path, scopeRoot, fragment string) {
 	path = filepath.Clean(path)
 	for _, d := range a.tabs {
 		if d.path == path {
+			if !d.loading && d.previewError == "" {
+				a.rememberOpened(path, false)
+			}
 			a.loadSerial++
 			if fragment != "" && d.kind == kindMarkdown {
 				d.fragment = fragment

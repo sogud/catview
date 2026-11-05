@@ -23,10 +23,12 @@ type application struct {
 	resolvedLanguage  string
 	win               *mygo.Window
 	settings          *mygo.Window
+	historyWindow     *mygo.Window
 	menu              *mygo.Menu
 	shownStatus       string
 	closePrompt       bool
-	updates           updateController
+	closeBatch        bool
+	updates           *updateController
 	fileOperation     bool
 	filePrompt        *mygo.Window
 	settingsTab       int
@@ -67,6 +69,7 @@ type application struct {
 
 func newApplication() *application {
 	return &application{
+		updates:        &updateController{},
 		folders:        make(map[string][]fileEntry),
 		folderErrors:   make(map[string]string),
 		folderLoading:  make(map[string]bool),
@@ -203,51 +206,10 @@ func (a *application) view(c *ui.Context) {
 	}
 }
 
-// Recent folders stay in the native File menu; the reading window still
-// contains only one file tree and one content pane.
 const maxRecentFolders = 8
 
 func (a *application) rememberFolder(path string) {
-	folders := []string{path}
-	for _, previous := range a.recentFolders {
-		if previous == path {
-			continue
-		}
-		folders = append(folders, previous)
-		if len(folders) == maxRecentFolders {
-			break
-		}
-	}
-	a.recentFolders = folders
-	a.storePreferences()
-}
-
-func (a *application) recentMenuItems() []*mygo.MenuItem {
-	if len(a.recentFolders) == 0 {
-		return []*mygo.MenuItem{{Label: a.tr("No recent folders"), Disabled: true}}
-	}
-	items := make([]*mygo.MenuItem, 0, len(a.recentFolders)+2)
-	for _, folder := range a.recentFolders {
-		path := folder
-		items = append(items, &mygo.MenuItem{
-			Label:   filepath.Base(path) + " · " + filepath.Base(filepath.Dir(path)),
-			ToolTip: path,
-			Click: func(*mygo.MenuItem, *mygo.Window) {
-				a.setRoot(path, true)
-				a.win.Invalidate()
-			},
-		})
-	}
-	items = append(items, mygo.Separator(), &mygo.MenuItem{
-		Label: a.tr("Clear recent folders"),
-		Click: func(*mygo.MenuItem, *mygo.Window) {
-			a.recentFolders = nil
-			a.storePreferences()
-			a.installMenu()
-			a.win.Invalidate()
-		},
-	})
-	return items
+	a.rememberOpened(path, true)
 }
 
 func (a *application) restoreSelectedFileRow() {
@@ -637,9 +599,12 @@ func (a *application) installMenu() {
 			mygo.Separator(), {Role: mygo.RoleQuit},
 		}},
 		{Label: a.tr("File"), Submenu: []*mygo.MenuItem{
+			{Label: a.tr("New window"), Accelerator: "CmdOrCtrl+N", Click: action(func() { newReaderWindow("", false) })},
+			{Label: a.tr("Open folder in new window…"), Click: action(a.chooseFolderInNewWindow)},
 			{Label: a.tr("Open file…"), Accelerator: "CmdOrCtrl+O", Click: action(func() { a.choose(false) })},
 			{Label: a.tr("Open folder…"), Accelerator: "CmdOrCtrl+Shift+O", Click: action(func() { a.choose(true) })},
-			{Label: a.tr("Recent folders"), Submenu: a.recentMenuItems()},
+			{Label: a.tr("Recent items"), Submenu: a.recentMenuItems()},
+			{Label: a.tr("Open history…"), Click: action(a.showHistory)},
 			mygo.Separator(),
 			{ID: "edit", Label: a.tr("Edit file"), Disabled: true, Click: action(a.toggleEditing)},
 			{ID: "save", Label: a.tr("Save"), Accelerator: "CmdOrCtrl+S", Disabled: true, Click: action(a.saveDocument)},
@@ -684,7 +649,9 @@ func (a *application) installMenu() {
 		{Label: a.tr("Translation"), Submenu: a.translationMenuItems()},
 		{Role: mygo.RoleWindowMenu},
 	})
-	mygo.App.SetMenu(a.menu)
+	if activeReader == a || activeReader == nil {
+		mygo.App.SetMenu(a.menu)
+	}
 }
 
 type savedPreferences struct {
@@ -747,6 +714,7 @@ func (a *application) loadPreferences() {
 	if p.ReadingWidth == 0 || p.ReadingWidth == 1 {
 		a.readingWidth = p.ReadingWidth
 	}
+	a.recentFolders = nil
 	seen := make(map[string]bool)
 	for _, folder := range p.RecentFolders {
 		if seen[folder] {
@@ -773,7 +741,7 @@ func (a *application) storePreferences() {
 		SidebarVisible: a.sidebarVisible, SidebarWidth: a.sidebarWidth,
 		ThemeMode: a.themeMode, AccentIndex: a.accentIndex, FontSize: a.fontSize,
 		LineHeight: a.lineHeight, ReadingWidth: a.readingWidth,
-		RecentFolders: a.recentFolders, FileIconStyle: a.fileIconStyle,
+		RecentFolders: recentHistoryFolders(), FileIconStyle: a.fileIconStyle,
 	}
 	a.preferencesError = ""
 	data, err := json.Marshal(p)
@@ -782,6 +750,8 @@ func (a *application) storePreferences() {
 	}
 	if err != nil {
 		a.preferencesError = a.tr("Could not save settings") + ": " + err.Error()
+	} else {
+		a.shareReadingPreferences()
 	}
 }
 
@@ -821,84 +791,34 @@ func (a *application) guardClose() {
 }
 
 func main() {
-	app := newApplication()
 	var pendingPaths []string
+	ready := false
 	mygo.App.OnOpenFile(func(path string) {
-		if app.win == nil {
+		if !ready {
 			pendingPaths = append(pendingPaths, path)
 			return
 		}
-		if info, err := os.Stat(path); err == nil {
-			app.setRoot(path, info.IsDir())
-			app.win.Focus()
+		if activeReader == nil {
+			newReaderWindow(path, false)
+		} else if info, err := os.Stat(path); err == nil {
+			activeReader.setRoot(path, info.IsDir())
+			activeReader.win.Focus()
 		}
 	})
 	mygo.App.SetVersion(releaseVersion)
 	mygo.App.WhenReady(func() {
-		app.loadPreferences()
-		app.applySystemAppearance()
-		app.resolveLanguage()
-		app.loadTranslationSettings()
-		app.win = mygo.NewWindow(mygo.WindowOptions{
-			Title: "CatView", Width: 1120, Height: 750, MinWidth: 680, MinHeight: 440,
-			TitleBarStyle: mygo.TitleBarHidden,
-			Vibrancy:      app.sidebarMaterial(),
-			StateKey:      "main", Content: ui.View(app.view),
-		})
-		app.installMenu()
-		app.guardClose()
-		app.startUpdates()
-		app.win.OnClosed(func() {
-			app.stopUpdates()
-			for _, d := range app.tabs {
-				if d.loadCancel != nil {
-					d.loadCancel()
-				}
-				cancelTranslation(d)
-			}
-			app.closeNativePreview()
-			app.closeEPUB()
-			app.closeHTMLPreview()
-			if app.pdf != nil {
-				app.pdf.Destroy()
-				app.pdf = nil
-			}
-			if app.settings != nil && !app.settings.IsDestroyed() {
-				app.settings.Close()
-			}
-		})
-		initialPath := ""
+		ready = true
+		if len(pendingPaths) == 0 && len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+			pendingPaths = append(pendingPaths, os.Args[1:]...)
+		}
+		first := ""
 		if len(pendingPaths) > 0 {
-			initialPath = pendingPaths[0]
-		} else if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
-			initialPath = os.Args[1]
-		} else if len(app.recentFolders) > 0 {
-			initialPath = app.recentFolders[0]
+			first = pendingPaths[0]
 		}
-		if initialPath != "" {
-			path, err := filepath.Abs(initialPath)
-			if err == nil {
-				info, err := os.Stat(path)
-				if err == nil {
-					app.setRoot(path, info.IsDir())
-					if info.IsDir() {
-						// setRoot resolves symlinks, so preload using its canonical path.
-						rootPath := app.root
-						if rows, err := directoryEntries(rootPath); err == nil {
-							app.folders[rootPath] = rows
-							for _, entry := range rows {
-								if entry.dir {
-									app.knownFolders[filepath.Join(rootPath, entry.name)] = true
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		app := newReaderWindow(first, first == "")
 		for i, path := range pendingPaths {
 			if i == 0 {
-				continue // The first file was opened above.
+				continue
 			}
 			if info, err := os.Stat(path); err == nil {
 				app.setRoot(path, info.IsDir())

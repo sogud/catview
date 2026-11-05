@@ -123,6 +123,8 @@ func (a *application) languageSettings(c *ui.Context) {
 
 func init() {
 	extra := map[string]string{
+		"Close other tabs": "关闭其他标签", "Close tabs to the left": "关闭左侧标签", "Close tabs to the right": "关闭右侧标签", "Close all tabs": "关闭全部标签", "Copy path": "复制路径",
+		"New window": "新建窗口", "Open folder in new window…": "在新窗口打开文件夹…", "Recent items": "最近打开", "No recent items": "暂无打开记录", "Open history…": "打开历史…", "Open history": "打开历史", "Clear history": "清空历史", "Open in a new window": "在新窗口打开", "Folder": "文件夹", "Could not save history: ": "无法保存历史：", "This history item is no longer available.": "无法打开：历史记录中的文件或文件夹已不可用。",
 		"System preview":      "系统预览",
 		"Image page %d of %d": "第 %d 页，共 %d 页", "Previous image page": "上一张图片", "Next image page": "下一张图片",
 		"Opening preview…": "正在加载预览…", "Try again": "重试", "Open in default app": "用默认应用打开",
