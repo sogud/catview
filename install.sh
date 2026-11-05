@@ -28,7 +28,7 @@ REPO="sogud/catview"                       # owner/name that publishes releases
 APP_NAME="CatView"               # .app bundle name (kind=app) or binary name (kind=cli)
 KIND="app"                       # app | cli
 ASSET_GLOB="CatView-*-macos-arm64.zip"           # e.g. SkillView-*-macos-arm64.zip
-ASSET_TEMPLATE="CatView-{tag}-macos-arm64.zip"   # e.g. SkillView-{version}-macos-arm64.zip ({tag} keeps the v)
+ASSET_TEMPLATE="CatView-{version}-macos-arm64.zip" # Release tags have v; asset versions do not.
 CHECKSUM_TEMPLATE="{asset}.sha256" # e.g. SHA256SUMS or {asset}.sha256; empty = none published
 MIN_MACOS="12.0"             # e.g. 13.0
 ALLOW_PRERELEASE="1"   # 1 = newest release may be a prerelease
