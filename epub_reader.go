@@ -136,6 +136,7 @@ func (a *application) openEPUB(d *document) {
 		return
 	}
 	a.epubView = page
+	html = strings.Replace(html, "</head>", "<style>"+a.fontCSS()+"</style></head>", 1)
 	page.Page().LoadHTML(html, "")
 	a.win.Invalidate()
 
@@ -181,7 +182,7 @@ func (a *application) epubCommand(method string, args ...string) {
 		return
 	}
 	switch method {
-	case "nextPage", "previousPage", "nextChapter", "previousChapter", "goTo", "setFont", "setTheme", "setLayout", "setAccent":
+	case "nextPage", "previousPage", "nextChapter", "previousChapter", "goTo", "setFont", "setTheme", "setLayout", "setAccent", "setFamilies":
 	default:
 		return
 	}
@@ -270,4 +271,10 @@ func (a *application) epubReadMenuItems() []*mygo.MenuItem {
 	}
 	items = append(items, &mygo.MenuItem{Label: "目录", Submenu: toc})
 	return items
+}
+
+func (a *application) epubSetFamilies() {
+	reading, _ := json.Marshal(cssFontFamily(a.readingFont, "ui-serif,serif"))
+	code, _ := json.Marshal(cssFontFamily(a.codeFont, "ui-monospace,monospace"))
+	a.epubCommand("setFamilies", string(reading), string(code))
 }

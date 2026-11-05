@@ -58,7 +58,12 @@ body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased
   const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
   const maxScroll=()=>vertical?Math.max(0,viewport.scrollWidth-viewport.clientWidth):Math.max(0,viewport.scrollHeight-viewport.clientHeight);
   function fraction(){const max=maxScroll();if(!max)return 0;return clamp((vertical?Math.abs(viewport.scrollLeft):viewport.scrollTop)/max,0,1)}
-  function setFont(value){chapter.style.fontSize=clamp(Number(value)||17,12,24)+'px'}
+  function setFamilies(reading,code){
+    let style=document.getElementById('reader-font-families');
+    if(!style){style=document.createElement('style');style.id='reader-font-families';document.head.appendChild(style)}
+    style.textContent='body,#chapter{font-family:'+reading+'}#chapter pre,#chapter code{font-family:'+code+'}';
+  }
+  function setFont(value){chapter.style.fontSize=clamp(Number(value)||17,12,48)+'px'}
   function setLayout(lineHeight,width){
     chapter.style.lineHeight=clamp(Number(lineHeight)||1.75,1.4,2).toString();
     if(!vertical)chapter.style.width='min(100%,'+clamp(Number(width)||800,700,1100)+'px)';
@@ -125,7 +130,7 @@ body{background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased
   });
   window.catviewReader=Object.freeze({
     goTo,nextPage:()=>step(true),previousPage:()=>step(false),
-    nextChapter,previousChapter,setFont,setTheme,setLayout,setAccent,position
+    nextChapter,previousChapter,setFamilies,setFont,setTheme,setLayout,setAccent,position
   });
   setFont(book.fontSize);setTheme(book.themeMode);setLayout(book.lineHeight,book.readerWidth);setAccent(book.linkLight,book.linkDark,book.colors);
   goTo(book.position?.chapter??0,'',book.position?.fraction??0);

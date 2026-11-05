@@ -43,6 +43,7 @@ func (a *application) refreshAppearance() {
 		a.win.Invalidate()
 	}
 	a.epubSetFont()
+	a.epubSetFamilies()
 	a.epubSetTheme()
 	a.epubSetLayout()
 	a.epubSetAccent()
@@ -152,10 +153,17 @@ func (a *application) appearanceSettings(c *ui.Context) {
 			picker.Track.AlignItems(ui.Center).Gap(5).Label(a.tr("Accent color")).Children(func() {
 				for i, palette := range accentPalettes {
 					chip := picker.Segment(i).Size(34, 34).Padding(4).Center().Radius(17).Label(a.tr(palette.name)).Tooltip(a.tr(palette.name))
-					if i == a.accentIndex {
-						chip.Border(2, ui.Hex(palette.swatch))
-					}
-					chip.Children(func() { ui.Box(c).Size(24, 24).Radius(12).Background(ui.Hex(palette.swatch)) })
+					chip.Children(func() {
+						ui.Box(c).Size(24, 24).Radius(12).Center().Background(ui.Hex(palette.swatch)).Children(func() {
+							if i == a.accentIndex {
+								color := ui.Hex("#FFFFFF")
+								if i == 4 || i == 7 {
+									color = ui.Hex("#1D1D1F")
+								}
+								ui.Text(c, "✓").FontSize(14).Bold().TextColor(color)
+							}
+						})
+					})
 				}
 			})
 			if picker.Track.Changed() {
@@ -186,6 +194,7 @@ func (a *application) appearanceSettings(c *ui.Context) {
 }
 
 func (a *application) readingSettings(c *ui.Context) {
+	a.fontSettings(c)
 	ui.Form(c, func() {
 		ui.Field(c, a.tr("Font size"), func() {
 			fontSize := float64(a.fontSize)
@@ -215,8 +224,8 @@ func (a *application) readingSettings(c *ui.Context) {
 	})
 	t := a.theme(c)
 	ui.Column(c).FillWidth().Padding(18).Gap(a.fontSize*(a.lineHeight-1)).Background(t.Background).TextColor(t.Text).Border(1, t.Border).Radius(6).Children(func() {
-		ui.Text(c, a.tr("Open and read.")).FontSize(a.fontSize).Bold()
-		ui.Text(c, a.tr("Reading preview")).FontSize(a.fontSize).TextColor(t.TextMuted)
+		ui.Text(c, a.tr("Open and read.")).Font(a.readingFont).FontSize(a.fontSize).Bold()
+		ui.Text(c, a.tr("Reading preview")).Font(a.readingFont).FontSize(a.fontSize).TextColor(t.TextMuted)
 	})
 }
 

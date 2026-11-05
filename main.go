@@ -56,6 +56,8 @@ type application struct {
 	fileIconStyle     int // 0 system, 1 Material
 	systemIcons       map[string]ui.ImageSource
 	fontSize          float32
+	readingFont       string
+	codeFont          string
 	lineHeight        float32
 	readingWidth      int
 	recentFolders     []string
@@ -377,7 +379,7 @@ func (a *application) reader(c *ui.Context) {
 				}
 			} else {
 				d.md.Theme = &markdown.Theme{
-					FontSize: a.fontSize, LineHeight: a.lineHeight,
+					Font: a.readingFont, CodeFont: a.codeFont, FontSize: a.fontSize, LineHeight: a.lineHeight,
 					Link: a.linkColor(t.Dark), BlockSpacing: 1.1,
 					CodeSize: 1, CodeBlockBackground: t.Background,
 				}
@@ -449,6 +451,10 @@ func (a *application) codeView(c *ui.Context, d *document) {
 	state := d.visibleCode()
 	state.ReadOnly = !d.editing || a.fileOperation
 	state.Font.Size = a.fontSize
+	state.Font.Family = a.codeFont
+	if state.Font.Family == "" {
+		state.Font.Family = "monospace"
+	}
 	state.LineHeight = a.lineHeight
 	editor.View(c, state).Grow(1).FillWidth()
 }
@@ -687,6 +693,8 @@ type savedPreferences struct {
 	ThemeMode      int      `json:"theme_mode"`
 	AccentIndex    int      `json:"accent_index"`
 	FileIconStyle  int      `json:"file_icon_style"`
+	ReadingFont    string   `json:"reading_font,omitempty"`
+	CodeFont       string   `json:"code_font,omitempty"`
 	FontSize       float32  `json:"font_size"`
 	LineHeight     float32  `json:"line_height"`
 	ReadingWidth   int      `json:"reading_width"`
@@ -730,6 +738,7 @@ func (a *application) loadPreferences() {
 	if p.AccentIndex >= 0 && p.AccentIndex < len(accentPalettes) {
 		a.accentIndex = p.AccentIndex
 	}
+	a.readingFont, a.codeFont = p.ReadingFont, p.CodeFont
 	if p.FontSize >= minReadingFontSize && p.FontSize <= maxReadingFontSize {
 		a.fontSize = p.FontSize
 	}
@@ -764,6 +773,7 @@ func (a *application) storePreferences() {
 	}
 	p := savedPreferences{Language: a.language, ColorTheme: a.colorTheme,
 		SidebarVisible: a.sidebarVisible, SidebarWidth: a.sidebarWidth,
+		ReadingFont: a.readingFont, CodeFont: a.codeFont,
 		ThemeMode: a.themeMode, AccentIndex: a.accentIndex, FontSize: a.fontSize,
 		LineHeight: a.lineHeight, ReadingWidth: a.readingWidth,
 		RecentFolders: recentHistoryFolders(), FileIconStyle: a.fileIconStyle,

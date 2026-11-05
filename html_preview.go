@@ -321,7 +321,7 @@ func (a *application) wrapHTMLPreview(content string, presentation bool, script,
 	if nonce != "" {
 		scriptPolicy = "'nonce-" + nonce + "'"
 	}
-	return `<!doctype html><html data-theme="` + mode + `" style="` + a.themeCSSVariables() + `--link-light:` + palette.lightLink + `;--link-dark:` + palette.darkLink + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src ` + scriptPolicy + `; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>` + previewCSS + codeTokenCSS + `</style></head><body style="` + style + `"><main>` + content + `</main>` + script + `</body></html>`
+	return `<!doctype html><html data-theme="` + mode + `" style="` + a.themeCSSVariables() + `--link-light:` + palette.lightLink + `;--link-dark:` + palette.darkLink + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src ` + scriptPolicy + `; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>` + previewCSS + codeTokenCSS + a.fontCSS() + `</style></head><body style="` + style + `"><main>` + content + `</main>` + script + `</body></html>`
 }
 
 func (a *application) generateHTMLPreview(d *document) (string, error) {

@@ -135,9 +135,10 @@ func (a *application) shareReadingPreferences() {
 		if other == a {
 			continue
 		}
-		if other.language == a.language && other.colorTheme == a.colorTheme && other.themeMode == a.themeMode && other.accentIndex == a.accentIndex && other.fileIconStyle == a.fileIconStyle && other.fontSize == a.fontSize && other.lineHeight == a.lineHeight && other.readingWidth == a.readingWidth {
+		if other.readingFont == a.readingFont && other.codeFont == a.codeFont && other.language == a.language && other.colorTheme == a.colorTheme && other.themeMode == a.themeMode && other.accentIndex == a.accentIndex && other.fileIconStyle == a.fileIconStyle && other.fontSize == a.fontSize && other.lineHeight == a.lineHeight && other.readingWidth == a.readingWidth {
 			continue
 		}
+		other.readingFont, other.codeFont = a.readingFont, a.codeFont
 		other.language, other.colorTheme, other.themeMode = a.language, a.colorTheme, a.themeMode
 		other.accentIndex, other.fileIconStyle = a.accentIndex, a.fileIconStyle
 		other.fontSize, other.lineHeight, other.readingWidth = a.fontSize, a.lineHeight, a.readingWidth
