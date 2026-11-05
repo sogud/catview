@@ -45,6 +45,8 @@ Normal quit saves open folders and tabs for the next launch without an explicit 
 
 Choose separate reading and code fonts in **Settings → Reading**. Fonts come from your Mac; the code picker lists monospaced families. Changes apply to Markdown, code, HTML and EPUB, without changing fixed-layout PDF or Quick Look documents.
 
+Markdown code blocks have a separate **Code block theme** setting: follow the reading theme, light, or dark. Use dark code blocks on a white reading surface; inline code keeps the reading theme.
+
 Drop folders onto the CatView Dock icon to open each folder in a new window, keeping existing windows and tabs.
 
 To open files from Finder, choose **Open With → CatView**. To make it the default for a file type, use **Get Info → Open with → Change All**. CatView does not change your defaults automatically.

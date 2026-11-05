@@ -317,11 +317,15 @@ func (a *application) wrapHTMLPreview(content string, presentation bool, script,
 	}
 	style := fmt.Sprintf("font-size:%.0fpx;line-height:%.2f;--reader-width:%.0fpx", a.fontSize, a.lineHeight, width)
 	palette := a.palette()
+	codeCSS := ""
+	if a.doc != nil && a.doc.kind == kindMarkdown {
+		codeCSS = a.markdownCodeCSS()
+	}
 	scriptPolicy := "'none'"
 	if nonce != "" {
 		scriptPolicy = "'nonce-" + nonce + "'"
 	}
-	return `<!doctype html><html data-theme="` + mode + `" style="` + a.themeCSSVariables() + `--link-light:` + palette.lightLink + `;--link-dark:` + palette.darkLink + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src ` + scriptPolicy + `; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>` + previewCSS + codeTokenCSS + a.fontCSS() + `</style></head><body style="` + style + `"><main>` + content + `</main>` + script + `</body></html>`
+	return `<!doctype html><html data-theme="` + mode + `" style="` + a.themeCSSVariables() + `--link-light:` + palette.lightLink + `;--link-dark:` + palette.darkLink + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src ` + scriptPolicy + `; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"><style>` + previewCSS + codeTokenCSS + codeCSS + a.fontCSS() + `</style></head><body style="` + style + `"><main>` + content + `</main>` + script + `</body></html>`
 }
 
 func (a *application) generateHTMLPreview(d *document) (string, error) {

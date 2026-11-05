@@ -192,3 +192,47 @@ func (a *application) markdownScripts(body, fragment string) (string, string, er
 	script += "const catviewPreview=" + string(config) + ";\n" + markdownScript + `</script>`
 	return script, nonce, nil
 }
+
+// Markdown code blocks may use a different appearance from the reading surface.
+func (a *application) markdownCodeTheme(reading *ui.Theme) *ui.Theme {
+	switch a.markdownCodeMode {
+	case 1:
+		return ui.LightTheme()
+	case 2:
+		return ui.DarkTheme()
+	default:
+		return reading
+	}
+}
+
+func (a *application) markdownCodeCSS() string {
+	if a.markdownCodeMode == 0 {
+		return ""
+	}
+	theme := a.markdownCodeTheme(ui.LightTheme())
+	var css strings.Builder
+	fmt.Fprintf(&css, "pre{background:#%02x%02x%02x;color:#%02x%02x%02x;border-color:#%02x%02x%02x;", theme.Background.R, theme.Background.G, theme.Background.B, theme.Text.R, theme.Text.G, theme.Text.B, theme.Border.R, theme.Border.G, theme.Border.B)
+	for i, token := range editor.DefaultTheme(theme).Tokens {
+		color := token.Color
+		if color.A == 0 {
+			color = theme.Text
+		}
+		fmt.Fprintf(&css, "--code-%d:#%02x%02x%02x;", i, color.R, color.G, color.B)
+	}
+	css.WriteString("}pre>code{color:inherit}")
+	return css.String()
+}
+
+var markdownLightCodeColors = editor.DefaultTheme(ui.LightTheme())
+var markdownDarkCodeColors = editor.DefaultTheme(ui.DarkTheme())
+
+func (a *application) markdownCodeColors() *editor.Theme {
+	switch a.markdownCodeMode {
+	case 1:
+		return markdownLightCodeColors
+	case 2:
+		return markdownDarkCodeColors
+	default:
+		return nil // Keep the renderer's cached reading-theme colors.
+	}
+}

@@ -196,6 +196,11 @@ func (a *application) appearanceSettings(c *ui.Context) {
 func (a *application) readingSettings(c *ui.Context) {
 	a.fontSettings(c)
 	ui.Form(c, func() {
+		ui.Field(c, a.tr("Code block theme"), func() {
+			if ui.Segmented(c, &a.markdownCodeMode, a.tr("Follow reading theme"), a.tr("Light"), a.tr("Dark")).AlignSelf(ui.Start).Label(a.tr("Code block theme")).Changed() {
+				a.settingsChanged()
+			}
+		})
 		ui.Field(c, a.tr("Font size"), func() {
 			fontSize := float64(a.fontSize)
 			ui.Row(c).AlignItems(ui.Center).Gap(10).Children(func() {

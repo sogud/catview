@@ -59,6 +59,7 @@ type application struct {
 	fontSize          float32
 	readingFont       string
 	codeFont          string
+	markdownCodeMode  int
 	lineHeight        float32
 	readingWidth      int
 	recentFolders     []string
@@ -379,10 +380,12 @@ func (a *application) reader(c *ui.Context) {
 					ui.WebView(c, a.htmlView).Grow(1)
 				}
 			} else {
+				codeTheme := a.markdownCodeTheme(t)
 				d.md.Theme = &markdown.Theme{
 					Font: a.readingFont, CodeFont: a.codeFont, FontSize: a.fontSize, LineHeight: a.lineHeight,
 					Link: a.linkColor(t.Dark), BlockSpacing: 1.1,
-					CodeSize: 1, CodeBlockBackground: t.Background,
+					CodeSize: 1, CodeBlockBackground: codeTheme.Background,
+					CodeBlockBorder: codeTheme.Border, CodeColors: a.markdownCodeColors(),
 				}
 				ui.Scroll(c).Grow(1).Padding(30, 38).Children(func() {
 					ui.Column(c).FillWidth().MaxWidth(a.preferredTextWidth()).AlignSelf(ui.Center).Children(func() {
@@ -688,19 +691,20 @@ func (a *application) installMenu() {
 }
 
 type savedPreferences struct {
-	ColorTheme     string   `json:"color_theme,omitempty"`
-	Language       string   `json:"language,omitempty"`
-	SidebarVisible bool     `json:"sidebar_visible"`
-	SidebarWidth   float32  `json:"sidebar_width"`
-	ThemeMode      int      `json:"theme_mode"`
-	AccentIndex    int      `json:"accent_index"`
-	FileIconStyle  int      `json:"file_icon_style"`
-	ReadingFont    string   `json:"reading_font,omitempty"`
-	CodeFont       string   `json:"code_font,omitempty"`
-	FontSize       float32  `json:"font_size"`
-	LineHeight     float32  `json:"line_height"`
-	ReadingWidth   int      `json:"reading_width"`
-	RecentFolders  []string `json:"recent_folders,omitempty"`
+	ColorTheme       string   `json:"color_theme,omitempty"`
+	Language         string   `json:"language,omitempty"`
+	SidebarVisible   bool     `json:"sidebar_visible"`
+	SidebarWidth     float32  `json:"sidebar_width"`
+	ThemeMode        int      `json:"theme_mode"`
+	AccentIndex      int      `json:"accent_index"`
+	FileIconStyle    int      `json:"file_icon_style"`
+	ReadingFont      string   `json:"reading_font,omitempty"`
+	CodeFont         string   `json:"code_font,omitempty"`
+	MarkdownCodeMode int      `json:"markdown_code_mode,omitempty"`
+	FontSize         float32  `json:"font_size"`
+	LineHeight       float32  `json:"line_height"`
+	ReadingWidth     int      `json:"reading_width"`
+	RecentFolders    []string `json:"recent_folders,omitempty"`
 }
 
 func (a *application) preferencesPath() string {
@@ -741,6 +745,9 @@ func (a *application) loadPreferences() {
 		a.accentIndex = p.AccentIndex
 	}
 	a.readingFont, a.codeFont = p.ReadingFont, p.CodeFont
+	if p.MarkdownCodeMode >= 0 && p.MarkdownCodeMode <= 2 {
+		a.markdownCodeMode = p.MarkdownCodeMode
+	}
 	if p.FontSize >= minReadingFontSize && p.FontSize <= maxReadingFontSize {
 		a.fontSize = p.FontSize
 	}
@@ -775,7 +782,7 @@ func (a *application) storePreferences() {
 	}
 	p := savedPreferences{Language: a.language, ColorTheme: a.colorTheme,
 		SidebarVisible: a.sidebarVisible, SidebarWidth: a.sidebarWidth,
-		ReadingFont: a.readingFont, CodeFont: a.codeFont,
+		ReadingFont: a.readingFont, CodeFont: a.codeFont, MarkdownCodeMode: a.markdownCodeMode,
 		ThemeMode: a.themeMode, AccentIndex: a.accentIndex, FontSize: a.fontSize,
 		LineHeight: a.lineHeight, ReadingWidth: a.readingWidth,
 		RecentFolders: recentHistoryFolders(), FileIconStyle: a.fileIconStyle,

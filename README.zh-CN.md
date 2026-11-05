@@ -45,6 +45,8 @@ curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh 
 
 在「设置 → 阅读」中分别选择阅读字体和代码字体。使用本机字体，代码字体只列等宽字体；应用于 Markdown、代码、HTML 和 EPUB，不修改 PDF 或 Quick Look 固定版式文档。
 
+Markdown 代码块可单独设置「代码块主题」：跟随阅读主题、浅色或深色。白色阅读区也可搭配深色代码块；行内代码保持阅读主题。
+
 将文件夹拖到 Dock 中的 CatView 图标，每个文件夹会在新窗口打开，保留已有窗口和标签。
 
 在 Finder 中通过「打开方式 → CatView」打开文件。若要设为某类文件的默认应用，选择「显示简介 → 打开方式 → 全部更改」。CatView 不会自动修改默认应用。
