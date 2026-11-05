@@ -152,15 +152,15 @@ func fileIconName(path string, isDirectory bool, expanded bool) string {
 		return "powerpoint"
 	case ".csv", ".tsv", ".xls", ".xlsx", ".ods":
 		return "table"
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".heic", ".avif":
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".heic", ".heif", ".avif", ".tif", ".tiff", ".ico", ".icns", ".psd", ".tga", ".exr", ".jp2", ".j2k", ".jxl", ".dds", ".dng", ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".sr2", ".raf", ".orf", ".rw2", ".pef", ".srw":
 		return "image"
 	case ".svg":
 		return "svg"
-	case ".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg":
+	case ".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg", ".aif", ".aiff", ".caf", ".ac3", ".ec3":
 		return "audio"
-	case ".mp4", ".mov", ".mkv", ".webm", ".avi":
+	case ".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi":
 		return "video"
-	case ".zip", ".tar", ".gz", ".tgz", ".7z", ".rar", ".xz", ".bz2":
+	case ".zip", ".tar", ".gz", ".tgz", ".7z", ".rar", ".xz", ".bz2", ".tbz2", ".cbz", ".cbr":
 		return "zip"
 	case ".db", ".sqlite", ".sqlite3", ".sql":
 		return "database"

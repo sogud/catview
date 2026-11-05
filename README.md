@@ -1,106 +1,131 @@
 # CatView
 
-**Open and read.** A lightweight, local-first file reader for macOS, built with [MyGo](https://github.com/egoist/mygo).
+**Open and read.** 一个轻量的 macOS 本地文件阅读器，基于 [MyGo](https://github.com/egoist/mygo) 构建。
 
-像 Finder 一样浏览文件，像 Preview 一样专注阅读。单侧栏、系统风格、无需导入或建立资料库。
+打开文件或文件夹即可阅读。单列文件树、多标签页、原生窗口，无需导入或建立资料库。
 
-## 功能
+[下载 Alpha 6](https://github.com/sogud/catview/releases/tag/v0.1.0-alpha.6) · [更新记录](CHANGELOG.md) · [反馈问题](https://github.com/sogud/catview/issues)
 
-- **浏览**：单击文件夹名称或图标展开/折叠；系统文件图标与 Material 图标可在设置中切换；最近 8 个文件夹与自动恢复；文件树右键支持打开、新建文件/文件夹、重命名、移到废纸篓和在 Finder 中定位。
-- **标签页**：打开多个文件、切换与关闭；同一文件不重复打开，未保存改动在关闭前确认。
-- **初始页**：淡色猫图标、打开文件/文件夹入口与快捷键提示。
-- **Markdown / HTML**：排版、表格、图片、HTML 锚点与中文标题跳转；代码块复用源码阅读器的语法高亮。`mermaid` 代码块离线渲染流程图、时序图等，采用 Codex 风格的蓝色明暗配色、圆角节点与细线，语法错误保留原始代码。
-- **代码与文本**：Go、TS、JS、Python、JSON、YAML 等语法高亮；默认只读，需要明确切换才可编辑。
-- **PDF / EPUB / 图片**：内嵌阅读；EPUB 支持章节导航、字号与阅读进度保存。
-- **Office**：DOCX/PPTX 基础图文预览，DOC 使用 macOS 系统转换，旧版 PPT 仅预览首页。
-- **外观**：默认 macOS 主题，浅色使用白色阅读区与系统半透明侧栏；可选暖白、GitHub、Nord、森林、薰衣草、砂岩，共 7 套明暗成对主题。支持跟随系统、8 种强调色、字号、行距、正文宽度；独立设置窗口使用 macOS 风格的图标分类与紧凑表单。
+## 安装
 
-文档默认离线阅读，无默认遥测。只有主动选择「翻译 → 翻译文档」并确认服务后，才发送当前 Markdown / TXT 正文；原文件不变。更新检查只访问公开 GitHub 发布信息，不发送文档。
+当前预编译版本支持 **macOS 12+、Apple Silicon（arm64）**，暂不提供 Intel Mac 安装包。
 
-**软件更新**：启动后检查，并每 6 小时自动检查新版本；后台下载并验证签名，完成后提示「安装并重启」，点击后才安装。未保存的编辑会阻止安装；下载好的更新可在离线时安装。设置 → 更新可分别关闭自动检查、自动下载，菜单仍保留手动检查。优先读取公开 Release 订阅，减少匿名 API 限流；限流时按服务器时间等待。Alpha 4 及更早版本需先手动安装 Alpha 5 一次。
+1. 从 [Releases](https://github.com/sogud/catview/releases) 下载 `CatView-…-macos-arm64.zip`。
+2. 解压，将 `CatView.app` 拖入「应用程序」。
+3. 首次打开若被系统阻止，可在确认来源后进入「系统设置 → 隐私与安全性」，选择「仍要打开」。
 
-## 下载
+当前为 **Alpha**：应用仅做临时签名，尚无正式 Developer ID 签名与 Apple 公证。更新包的 Ed25519 签名不等同于 Apple 公证。手动安装请选择 ZIP；Release 中的 `tar.gz` 和 JSON 文件供自动更新使用。
 
-前往 [Releases](https://github.com/sogud/catview/releases) 下载 **macOS Apple Silicon (arm64)** 预览版，解压后将 `CatView.app` 拖入「应用程序」。
+<details>
+<summary>通过终端安装或卸载</summary>
 
-> **Alpha 提示**：当前构建仅做本地临时签名，**尚未经过 Apple 公证**，首次打开可能被 macOS Gatekeeper 拦截。请通过「系统设置 → 隐私与安全性」确认来源后再决定是否打开。暂不提供 Intel Mac 的预编译安装包。
-
-### 一行安装（推荐）
-
-在「终端」里运行（Apple Silicon，macOS 12+）：
+先查看 [安装脚本](install.sh)，确认后运行：
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh
 ```
 
-脚本会下载最新版本（包括预览版），校验 SHA-256，把 `CatView.app` 装到「应用程序」（没有写入权限时装到 `~/Applications`）。用这种方式安装不会弹出 Gatekeeper 拦截。指定版本：`curl -fsSL … | VERSION=v0.1.0-alpha.4 sh`；卸载：`curl -fsSL … | sh -s -- --uninstall`（不删设置和数据）。安装前可以先看看[脚本内容](install.sh)。
+脚本下载最新版本（含预览版）并核对发布的 SHA-256，安装到 `/Applications`；没有写入权限时使用 `~/Applications`。它会移除应用的 quarantine 标记，请只从可信来源运行。
 
-<details>
-<summary>用浏览器下载后提示「无法验证开发者」</summary>
-
-方法一：在终端运行
+指定版本：
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/CatView.app
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | VERSION=v0.1.0-alpha.6 sh
 ```
 
-方法二：先双击打开一次，然后进入 **系统设置 → 隐私与安全性**，在下方找到「已阻止打开 CatView」，点 **仍要打开**，再输入密码确认。
+卸载应用，保留设置和数据：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh -s -- --uninstall
+```
 
 </details>
 
-## 快捷键
+## 开始使用
+
+- 初始页可打开文件或文件夹，也可通过「文件」菜单返回最近打开的目录。
+- 单击文件夹展开或折叠，单击文件在新标签打开；同一文件会复用已有标签。
+- 文件树右键可新建文件/文件夹、重命名、移到废纸篓，或在 Finder 中定位。同名项目不会被覆盖，删除前需确认。
+- 文本默认只读。在「文件 → 编辑文件」中显式开启编辑；保存时检测外部修改，关闭时提示未保存内容。
 
 | 操作 | 快捷键 |
 | --- | --- |
-| 打开文件 | ⌘O |
-| 打开文件夹 | ⇧⌘O |
-| 显示 / 隐藏侧栏 | ⌘B |
+| 打开文件 / 文件夹 | ⌘O / ⇧⌘O |
+| 显示或隐藏侧栏 | ⌘B |
 | 设置 | ⌘, |
-| 关闭当前标签页 | ⌘W |
-| 关闭窗口 | ⇧⌘W |
-| 查找（支持的源码视图） | ⌘F |
-| 保存（显式编辑后） | ⌘S |
+| 关闭标签 / 窗口 | ⌘W / ⇧⌘W |
+| 查找（源码视图） | ⌘F |
+| 保存（编辑模式） | ⌘S |
 
-可通过 macOS「文件」菜单切换最近文件夹。窗口控件留在文件树顶部，阅读区不再有独立空白标题条；标签页与窗口控件处于同一层。
+## 支持的内容
 
-文件操作不会覆盖同名项目；删除需确认并使用系统废纸篓。重命名或删除前，需先保存/放弃相关标签的未保存编辑。当前打开的根文件夹不能直接重命名或删除，可在 Finder 中操作。
+以下以 Alpha 6 为准；系统解码能力与未逐项验证的格式见下方限制。
 
-Markdown 中指向已打开文件夹内其他文件的链接会在新标签打开，已打开的文件会复用标签；支持相对路径、空格编码和 `文件.md#锚点`。同页目录链接直接滚动到目标。文件不存在或超出当前文档的授权文件夹时显示提示。
+| 类型 | 当前能力 |
+| --- | --- |
+| Markdown / HTML | 表格、图片、代码高亮与锚点；Markdown 的本地文件链接在标签页打开，范围限于已授权文件夹 |
+| Mermaid | 离线流程图、时序图等；Codex 风格的蓝色明暗配色、圆角节点和细线；语法错误时保留源码 |
+| 代码 / 文本 | Go、TS、JS、Python、JSON、YAML 等语法高亮与按需编辑；小型 JSON、XML 和 XML plist 可格式化阅读，编辑仍使用原文 |
+| CSV / TSV | 原生表格、可调列宽、单元格复制；保留前导零和长整数，可切换源码 |
+| 图片 / SVG | PNG、JPEG、WebP、BMP、HEIC/HEIF、AVIF、ICO/ICNS；适应窗口或缩放。GIF 可播放动画，TIFF 可逐页阅读；SVG 支持静态图形，拒绝脚本、动画和嵌入资源 |
+| 专业图片 | PSD、TGA、EXR、JPEG 2000、JPEG XL、DDS 与 DNG/CR2/CR3/NEF/NRW/ARW/SR2/RAF/ORF/RW2/PEF/SRW 路由至 ImageIO；仅系统能解码时显示合成图或预览图，不读取图层或进行 RAW 编辑 |
+| 视频 / 音频 | MP4、M4V、MOV、M4A、MP3、WAV、AIFF、AAC、CAF、FLAC、AC3/EAC3 交给 macOS AVKit；打开不自动播放，离开标签停止，再次进入从头暂停 |
+| PDF | 窗口内使用系统 WebKit PDF 阅读 |
+| EPUB | 可重排正文、章节导航、字号和进度恢复；不支持 DRM 或固定版式 |
+| Office | DOCX/PPTX 基础图文预览；DOC 使用系统转换；旧版 PPT 仅预览首页 |
+| 系统文档 | XLSX、XLS、RTF、ODT、Pages/Numbers/Keynote 交给 Quick Look，效果取决于系统和已安装的预览扩展；不支持目录式文档包 |
+| 邮件 / 日历 | EML 正文、邮件头和附件名称；ICS 事件、时区与全天日期；只读，可查看 UTF-8 源码，不访问账户、不导入事件 |
+| 压缩包 | ZIP、TAR、TAR.GZ/TGZ、TAR.BZ2/TBZ2 只读目录与大小；7z、RAR/CBR 借用系统 bsdtar 列出目录，不解压或打开包内文件 |
+| CBZ | 按文件名自然排序逐页阅读静态图片，只在内存读取当前页，不解压到磁盘 |
 
-## 翻译与界面语言
+已实机确认 CSV/TSV、SVG、HEIC、TIFF 首图、AVIF/ICNS、JSON、ZIP、基础 XLSX/RTF/ODT 和 H.264 MP4；MP3 的播放/暂停与 WAV 初始状态也已检查。集中验收另确认了 EML 正文/附件名称、ICS 事件和源码切换、TAR.GZ/7z 目录、CBZ 自然排序/翻页、TIFF 第二页及 GIF 动画循环；损坏的 ICS/7z 显示可见错误。ICO、RAR、TAR.BZ2、专业图片和新增音频编码尚未逐一实机验收。音视频容器不代表所有编码均可播放，Quick Look、RAW 相机型号和压缩方法取决于系统。
 
-设置中可选 18 种界面语言或跟随系统；核心菜单与设置使用 CatView 自有字典；保存/关闭/更新提示已覆盖英文、简体和繁体中文，其余语言缺项回退英文。部分格式阅读错误仍沿用旧提示，未完成全部语言校对与 RTL 布局验收。
+「显示 → 系统预览」可为 Office/PDF 切换系统原版式预览，也可尝试 DOCM/PPTM/XLSM/XLSB/ODP/ODS；没有相应系统扩展或文档不兼容时可能仅显示文件图标，不保证能阅读这些格式。本轮 DOCX 样本在 Quick Look 中只显示图标，原有基础预览保留。图片缩放和「显示源码」也位于该菜单；⌘0 适应窗口，⌘1 显示预览位图的 100%，⌘+/⌘− 调整大小。多页 TIFF 和 CBZ 使用「阅读」菜单或 ⌥←/⌥→ 翻页。读取失败会显示原因，并提供重试、默认应用和 Finder 入口。
 
-翻译复用 `translate-kit`：仅 Markdown 与 `.txt` / `.text`（小于 1 MiB），原文/译文/双语切换，按标签页隔离、可取消，进入编辑或关闭标签即取消。PDF、EPUB、Office 不做全文翻译。译文仅保留在内存，不覆盖原文件。
+## 外观与更新
 
-在设置填写服务、地址、模型、目标语言与密钥后保存。密钥框遮罩，文件保存在应用数据目录 `translation.json`，原子写入且权限 `0600`；这是本地明文文件，不是加密保险库，不使用 macOS Keychain。Google/有道网页接口非官方。未进行真实服务、密钥与端到端翻译验收。
+默认 macOS 主题采用白色阅读区和系统侧栏材质。可切换暖白、GitHub、Nord、森林、薰衣草、砂岩，共 7 套明暗主题；也可设置强调色、字号、行距与正文宽度。
+
+Alpha 5 起默认后台检查并下载更新，验证签名后提示「安装并重启」，点击后才安装；未保存的编辑会阻止安装。设置 → 更新可分别关闭自动检查、自动下载；「CatView → 检查更新…」保留手动入口。自动检查约每 6 小时一次，网络或限流失败会稍后重试。
+
+**Alpha 4 及更早版本需要先手动安装 Alpha 5 一次。** 后续更新需应用所在文件夹可写；已下载的更新可离线安装。
+
+## 本地数据与翻译
+
+文档在本机阅读，不默认发送正文，无默认遥测。自动更新会访问公开 GitHub 发布信息。
+
+翻译仅支持小于 1 MiB 的 Markdown / TXT。主动选择翻译并确认服务后，才向所选服务发送当前正文；支持原文、译文和双语查看，不覆盖文件。服务配置与密钥以本地明文保存，仅当前用户可读写，未使用 Keychain；Google/有道网页接口非官方。真实翻译服务尚未完成端到端验收。
+
+界面可选 18 种语言或跟随系统，缺失译文回退英文；并非所有语言和 RTL 布局都已校对。
 
 ## 从源码构建
 
-翻译依赖固定为已发布的 `github.com/sogud/translate-kit v0.1.0`，Go 会自动下载，无需同级源码目录。v0.1.0-alpha.5 新增后台检查、签名下载与点击安装重启；保留 Alpha 4 的默认 macOS 配色、系统侧栏材质及设置布局。
+在 macOS 上安装符合 [go.mod](go.mod) 要求的 Go，进入仓库后运行：
 
-在 macOS 上安装 [Go](https://go.dev/)（以 `go.mod` 的版本要求为准）：
-
-```bash
+```sh
 go mod download
 go run github.com/egoist/mygo/cmd/mygo@v0.7.3 build -skip-dmg
 ```
 
-输出：`build/darwin-arm64/CatView.app`。项目优先支持 macOS；其他平台目前未经完整验证。
+Apple Silicon 产物位于 `build/darwin-arm64/CatView.app`。依赖由 Go 下载，无需同级源码目录；其他平台尚未完整验证。
 
-维护者发布时另外通过 `MYGO_UPDATER_PRIVATE_KEY` 环境变量提供原有 Ed25519 私钥，构建工具才会生成签名的 `.tar.gz` 与 `update-darwin-arm64.json`；两者须与安装 ZIP 一起上传到对应版本的 Release。私钥不进 Git，也不随应用分发；请安全备份，后续更新须使用同一密钥。普通源码构建不需要私钥。
+普通构建不需要发布私钥。维护者通过 `MYGO_UPDATER_PRIVATE_KEY` 提供原有 Ed25519 密钥，才会生成签名更新包与版本清单；须与 ZIP 一起上传到对应 Release。私钥不得提交或随应用分发，后续更新须使用同一密钥。
 
 ## 已知限制
 
-- 当前是实验性 **Alpha**，更新包有 Ed25519 签名，应用仍未做正式 Developer ID 签名与 Apple 公证。
-- Office 不是原版排版引擎；复杂版式、字体、母版、动画可能失真，旧版 PPT 仅首页。
-- EPUB 不支持 DRM、固定版式或全部出版商 CSS；复杂竖排仍需更多实机验证。
-- 部分带 HTML 的小型 Markdown 文件通过命令行直接打开时，可能停留在空阅读区；正在排查。
-- 切换标签页会重建 PDF/HTML/Office 预览，暂不保留这些格式的滚动位置；EPUB 使用已记录的阅读进度。
-- 已用临时文件实测右键新建、重命名、重名/权限错误、废纸篓取消/删除/恢复，以及标签关闭、设置切换和持久化；Markdown 图表、高亮与锚点/文件链接已实机点击验证。真实翻译服务及全部文档格式组合仍待专项验收。
+- Office 仅作基础预览，复杂排版、字体、母版和动画可能失真；EPUB 不支持全部出版社样式。
+- 文本（含 Markdown/HTML/CSV）限 12 MiB；表格最多显示 20,000 行、128 列或 200,000 单元格。JSON/XML 自动格式化限 2 MiB，超过时仍可看源码。
+- 图片文件限 36 MiB、源图限 1 亿像素，预览长边缩至最多 4096 像素。GIF 最多 300 帧、每边 4096 像素，画布像素乘帧数不超过 64 Mi；TIFF 最多 512 页。AVIF 等解码能力取决于 macOS 版本。
+- SVG 限 4 MiB。ZIP 和系统文档限 50 MiB，ZIP 最多 20,000 条目。CBZ 限 100 MiB、2,000 张图片，单张解压后限 36 MiB，不支持加密、活动图片和不安全路径。
+- TAR 与 7z/RAR 限 100 MiB、20,000 条目；TAR 扫描解压数据限 256 MiB，7z/RAR 目录输出限 2 MiB，最多运行 8 秒。不支持加密目录、所有 RAR 变体或压缩方法；CBR 只列目录，不作为漫画翻页。
+- EML 限 12 MiB、200 个 MIME 部件和 16 层；正文单段 2 MiB、合计 4 MiB，不加载图片或打开附件。ICS 限 1 MiB、512 个组件和 32 层，仅展示 VEVENT，不展开重复事件或执行提醒；自定义时区保留原值。
+- XLSX 使用系统只读预览，不提供编辑或公式计算；本机 ODS 未显示表格。MKV、AVI、WebM、OGG/Opus、MOBI/AZW/KFX、DRM 及 TAR.XZ 尚未接入。专业图片只作有限尺寸预览，不保证各相机型号、旧 macOS、HDR 或色彩工作流。
+- 切换标签会重建 PDF/HTML/Office 预览，暂不保留这些格式的滚动位置。
+- 部分带 HTML 的小型 Markdown 文件通过命令行直接打开时，可能停留在空阅读区。
+- 当前打开的根文件夹不能在文件树中重命名或删除，可在 Finder 中操作。
 
 ## 开源协议
 
-[MIT](LICENSE)。文件类型图标来自 [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)（MIT），具体许可见 [图标声明](assets/filetype-material-icon-theme-LICENSE.txt)。依赖库许可见 [第三方声明](THIRD_PARTY_LICENSES.txt)。
+[MIT](LICENSE)。文件图标来自 [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme)，见 [图标许可](assets/filetype-material-icon-theme-LICENSE.txt)；Mermaid 与其他依赖见 [第三方声明](THIRD_PARTY_LICENSES.txt)。
 
-项目名 CatView 暂未完成商标可用性核查，预发布不构成商标独占声明。
+CatView 名称和猫图形尚未完成商标可用性核查，预发布不构成商标独占声明。

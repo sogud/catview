@@ -24,6 +24,9 @@ func previewLink(sourceFile, ref string) string {
 	if u.Scheme == "http" || u.Scheme == "https" || u.Scheme == "mailto" || strings.HasPrefix(ref, "#") {
 		return ref
 	}
+	if sourceFile == "" {
+		return ""
+	}
 	if u.Scheme != "" && u.Scheme != "file" || u.Host != "" && !(u.Scheme == "file" && u.Host == "localhost") {
 		return ""
 	}

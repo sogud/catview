@@ -1,12 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -30,6 +31,12 @@ const (
 	kindImage
 	kindPDF
 	kindEPUB
+	kindTable
+	kindSVG
+	kindMedia
+	kindSystem
+	kindArchive
+	kindDocument
 )
 
 const (
@@ -43,6 +50,19 @@ type fileEntry struct {
 }
 
 type document struct {
+	loading            bool
+	previewError       string
+	loadCancel         context.CancelFunc
+	table              *tablePreview
+	imageZoom          float32 // 0 fits the pane; otherwise a scale in DIPs.
+	imageIndex         int
+	imagePages         int
+	imageAnimated      bool
+	imageScroll        ui.ScrollState
+	showSource         bool
+	previewHTML        string
+	systemPreview      bool
+	formatted          *editor.State
 	translation        documentTranslation
 	path               string
 	scopeRoot          string
@@ -64,7 +84,7 @@ type document struct {
 }
 
 func (d *document) canEdit() bool {
-	return d != nil && (d.kind == kindText || d.kind == kindMarkdown || d.kind == kindHTML)
+	return d != nil && !d.loading && !d.systemPreview && d.previewError == "" && (d.kind == kindText || d.kind == kindMarkdown || d.kind == kindHTML)
 }
 
 func (d *document) label() string {
@@ -244,49 +264,13 @@ func (a *application) openDocumentAt(path, scopeRoot, fragment string) {
 		a.status = "拒绝打开所选目录之外的文件"
 		return
 	}
-	a.status = "正在读取：" + filepath.Base(path)
-	a.loadSerial++
-	serial := a.loadSerial
-	epoch := a.loadEpoch
-	win := a.win
-	go func() {
-		d, err := readDocument(path)
-		win.Update(func() {
-			if epoch != a.loadEpoch {
-				return
-			}
-			if err != nil {
-				if serial != a.loadSerial {
-					return
-				}
-				log.Printf("CatView: failed to read %s: %v", filepath.Base(path), err)
-				a.restoreSelectedFileRow()
-				a.status = "打开失败：" + err.Error()
-				return
-			}
-			for _, existing := range a.tabs {
-				if existing.path == path {
-					if serial == a.loadSerial {
-						a.activateDocument(existing)
-					}
-					return
-				}
-			}
-			d.scopeRoot = scopeRoot
-			d.fragment = fragment
-			if d.kind == kindMarkdown {
-				d.htmlRich = d.htmlRich || fragment != ""
-				d.md.LoadImage = localImageLoader(path, scopeRoot)
-			}
-			a.tabs = append(a.tabs, d)
-			if serial == a.loadSerial || a.doc == nil {
-				a.activateDocument(d)
-			}
-		})
-	}()
+	d := &document{path: path, scopeRoot: scopeRoot, fragment: fragment}
+	a.tabs = append(a.tabs, d)
+	a.loadDocument(d)
+	a.activateDocument(d)
 }
 
-func readDocument(path string) (*document, error) {
+func readDocument(ctx context.Context, path string, imageIndex int) (*document, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
@@ -296,7 +280,18 @@ func readDocument(path string) (*document, error) {
 	}
 	d := &document{path: path, mode: info.Mode()}
 	ext := strings.ToLower(filepath.Ext(path))
+	limit := int64(maxTextBytes)
+	if isCatalogArchive(path) {
+		d.kind = kindArchive
+		d.table, err = readArchiveCatalog(ctx, path)
+		return d, err
+	}
 	switch ext {
+	case ".eml", ".ics":
+		d.kind = kindDocument
+		if ext == ".ics" {
+			limit = 1 << 20
+		}
 	case ".md", ".markdown", ".mdown":
 		d.kind = kindMarkdown
 	case ".htm", ".html":
@@ -316,7 +311,36 @@ func readDocument(path string) (*document, error) {
 		return d, nil
 	case ".pdf":
 		d.kind = kindPDF
-		return d, nil // Let the system webview stream the PDF from disk.
+		return d, checkFileSignature(path, "%PDF-")
+	case ".mp4", ".m4v", ".mov", ".m4a", ".mp3", ".wav", ".aif", ".aiff", ".aac", ".caf", ".flac", ".ac3", ".ec3":
+		d.kind = kindMedia
+		return d, nil // AVFoundation reads local media on demand, never into a Go buffer.
+	case ".xlsx", ".xls", ".rtf", ".odt", ".key", ".pages", ".numbers":
+		if info.Size() > 50<<20 {
+			return nil, errors.New("文件超过 50 MiB，暂不加载系统预览")
+		}
+		d.kind = kindSystem
+		return d, nil
+	case ".ods":
+		return nil, errors.New("当前未接入 ODS 表格预览，请使用默认应用打开")
+	case ".mobi", ".azw", ".azw3", ".kfx":
+		return nil, errors.New("尚未接入 Kindle 电子书预览，请使用默认应用打开；不处理 DRM 内容")
+	case ".mkv", ".avi", ".wmv", ".flv", ".webm", ".ogg", ".opus":
+		return nil, errors.New("此媒体容器尚未接入，请使用默认播放器打开")
+	case ".cbz":
+		return readComicPage(ctx, path, imageIndex)
+	case ".zip":
+		if info.Size() > 50<<20 {
+			return nil, errors.New("ZIP 超过 50 MiB，暂不加载目录")
+		}
+		d.kind = kindArchive
+		d.table, err = readZIPCatalog(ctx, path)
+		return d, err
+	case ".csv", ".tsv":
+		d.kind = kindTable
+	case ".svg":
+		d.kind = kindSVG
+		limit = 4 << 20
 	case ".epub":
 		d.kind = kindEPUB
 		if info.Size() > 100<<20 {
@@ -328,29 +352,60 @@ func readDocument(path string) (*document, error) {
 		}
 		d.book = book
 		return d, nil
-	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp":
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".heic", ".heif", ".tif", ".tiff", ".avif", ".ico", ".icns",
+		".psd", ".tga", ".exr", ".jp2", ".j2k", ".jxl", ".dds", ".dng", ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".sr2", ".raf", ".orf", ".rw2", ".pef", ".srw":
 		d.kind = kindImage
-		if info.Size() > maxImageBytes {
-			return nil, errors.New("图片超过 36 MB，暂不加载")
-		}
+		limit = maxImageBytes
 	default:
 		d.kind = kindText
-		if info.Size() > maxTextBytes {
-			return nil, errors.New("文本超过 12 MB，暂不加载")
-		}
 	}
-	data, err := os.ReadFile(path)
+	data, err := readPreviewBytes(ctx, path, limit)
 	if err != nil {
 		return nil, err
 	}
 	if d.kind == kindImage {
-		d.picture, err = ui.DecodeBitmap(data)
+		decoded, err := decodeImagePage(data, imageIndex)
+		d.picture, d.imagePages, d.imageAnimated = decoded.picture, decoded.pages, decoded.animated
+		if d.imageAnimated {
+			d.source = string(data)
+		}
 		return d, err
+	}
+	if d.kind == kindSVG {
+		if err := validateSVG(data); err != nil {
+			return nil, err
+		}
+		d.source = string(data)
+		return d, nil
+	}
+	if d.kind == kindDocument {
+		if ext == ".eml" {
+			d.previewHTML, err = readMessagePreview(ctx, data)
+		} else {
+			if !utf8.Valid(data) {
+				return nil, errors.New("日历不是有效的 UTF-8 文件")
+			}
+			d.previewHTML, err = readCalendarPreview(ctx, bytesWithoutUTF8BOM(data))
+		}
+		if err != nil {
+			return nil, err
+		}
+		// MIME charsets may decode successfully even when the raw message is
+		// not UTF-8. Keep the rendered view; do not offer a corrupted source.
+		if !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
+			return d, nil
+		}
 	}
 	if !utf8.Valid(data) || strings.IndexByte(string(data), 0) != -1 {
 		return nil, errors.New("此文件不是 UTF-8 文本，暂不支持预览")
 	}
 	d.source = string(data)
+	if d.kind == kindTable {
+		d.table, err = readDelimited(ctx, string(bytesWithoutUTF8BOM(data)), ext == ".tsv")
+		if err != nil {
+			return nil, err
+		}
+	}
 	if d.kind == kindMarkdown {
 		d.htmlRich = requiresHTMLRendering(d.source)
 	}
@@ -361,6 +416,9 @@ func readDocument(path string) (*document, error) {
 		Buffer: buf, ReadOnly: true, LineNumbers: editor.LineNumbersOff,
 		NoFolding: true, NoIndentGuides: true, NoActiveLine: true,
 		SoftWrap: d.kind == kindMarkdown || ext == ".txt",
+	}
+	if d.kind == kindText {
+		d.formatted = formattedText(d.source, path)
 	}
 	return d, nil
 }
@@ -383,34 +441,36 @@ func localImageLoader(markdownPath, scopeRoot string) func(string) (ui.ImageSour
 		}
 		switch strings.ToLower(filepath.Ext(asset)) {
 		case ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp":
-			data, err := os.ReadFile(asset)
+			data, err := readPreviewBytes(context.Background(), asset, maxImageBytes)
 			if err != nil {
 				return nil, err
 			}
-			return ui.DecodeBitmap(data)
+			return decodePreviewImage(data)
 		}
 		return nil, os.ErrPermission
 	}
 }
 
-func (a *application) openPDF(path string) {
+func (a *application) openPDF(path string) error {
 	if a.pdf == nil {
 		web, err := a.win.NewWebView(mygo.WebViewOptions{
 			Page:            mygo.PageOptions{Untrusted: true},
 			BackgroundColor: a.webBackground(),
 		})
 		if err != nil {
-			a.status = "PDF 视图创建失败：" + err.Error()
-			return
+			return fmt.Errorf("PDF 视图创建失败：%w", err)
 		}
 		a.pdf = web
 	}
 	// On macOS, LoadFile grants read access to the file's own directory.
 	// The web page is untrusted: no Go bridge is exposed to its content.
 	if err := a.pdf.Page().LoadFile(path); err != nil {
-		a.status = "PDF 打开失败：" + err.Error()
+		a.pdf.Destroy()
+		a.pdf = nil
+		return fmt.Errorf("PDF 打开失败：%w", err)
 	}
 	a.win.Invalidate()
+	return nil
 }
 
 func (a *application) cancelEditing() {
@@ -476,6 +536,9 @@ func (a *application) saveDocument() {
 			}
 			d.digest = newHash
 			d.source = text
+			if d.kind == kindText {
+				d.formatted = formattedText(text, d.path)
+			}
 			if d.kind == kindMarkdown {
 				d.htmlRich = requiresHTMLRendering(text)
 			}

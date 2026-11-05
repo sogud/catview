@@ -123,6 +123,15 @@ func (a *application) languageSettings(c *ui.Context) {
 
 func init() {
 	extra := map[string]string{
+		"System preview":      "系统预览",
+		"Image page %d of %d": "第 %d 页，共 %d 页", "Previous image page": "上一张图片", "Next image page": "下一张图片",
+		"Opening preview…": "正在加载预览…", "Try again": "重试", "Open in default app": "用默认应用打开",
+		"Zoom in / increase text size": "放大图片／文字", "Zoom out / decrease text size": "缩小图片／文字",
+		"Fit image to window": "图片适应窗口", "Image at 100%": "图片缩放至 100%", "Show source": "显示源码",
+		"Copy cell": "复制单元格", "Empty table": "表格为空",
+		"Preview limited to 20,000 rows, 128 columns or 200,000 cells.":                                    "仅预览前 20,000 行、128 列，最多 200,000 个单元格。",
+		"Archive contents only. Files are not extracted.":                                                  "仅浏览压缩包目录，不解压文件。",
+		"This media could not be opened. Its codec may not be supported by macOS, or the file is damaged.": "无法打开此媒体。macOS 可能不支持其编码，或文件已损坏。",
 		"Recent folders": "最近打开的文件夹", "No recent folders": "无最近文件夹", "Clear recent folders": "清除最近记录",
 		"Show in Finder": "在访达中显示", "Refresh folders": "重新读取目录", "Increase text size": "放大文字", "Decrease text size": "缩小文字",
 		"Choose a file": "选择文件", "Choose a folder": "选择文件夹", "⌘O Open a file": "⌘O 打开文件", "Toggle sidebar ⌘B": "显示或隐藏侧边栏 ⌘B", "Open folder ⇧⌘O": "打开文件夹 ⇧⌘O",

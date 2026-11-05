@@ -92,6 +92,7 @@ func (a *application) activateDocument(d *document) {
 	}
 	a.closeEPUB()
 	a.closeHTMLPreview()
+	a.closeNativePreview()
 	if a.pdf != nil {
 		a.pdf.Destroy()
 		a.pdf = nil
@@ -106,14 +107,7 @@ func (a *application) activateDocument(d *document) {
 		a.status = "已打开 " + filepath.Base(d.path)
 		a.win.SetTitle(filepath.Base(d.path))
 		a.win.SetRepresentedFile(d.path)
-		switch {
-		case d.kind == kindPDF:
-			a.openPDF(d.path)
-		case d.kind == kindEPUB:
-			a.openEPUB(d)
-		case d.kind == kindHTML || d.kind == kindOffice || (d.kind == kindMarkdown && d.htmlRich):
-			a.openHTMLPreview(d)
-		}
+		a.openDocumentPreview(d)
 	}
 	a.restoreSelectedFileRow()
 	a.installMenu()
@@ -121,6 +115,9 @@ func (a *application) activateDocument(d *document) {
 }
 
 func (a *application) removeTab(d *document) {
+	if d.loadCancel != nil {
+		d.loadCancel()
+	}
 	cancelTranslation(d)
 	for i, tab := range a.tabs {
 		if tab != d {

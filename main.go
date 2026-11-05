@@ -62,6 +62,7 @@ type application struct {
 	htmlView          *mygo.WebView
 	epubView          *mygo.WebView
 	epubCancel        func()
+	native            *nativePreview
 }
 
 func newApplication() *application {
@@ -384,6 +385,13 @@ func (a *application) reader(c *ui.Context) {
 			a.welcomeView(c)
 			return
 		}
+		if a.previewMessage(c, d) {
+			return
+		}
+		if d.systemPreview {
+			a.nativePreviewView(c)
+			return
+		}
 		if a.translationReader(c, d) {
 			return
 		}
@@ -419,9 +427,25 @@ func (a *application) reader(c *ui.Context) {
 			if a.htmlView != nil {
 				ui.WebView(c, a.htmlView).Grow(1)
 			}
+		case kindDocument:
+			if d.showSource && d.code != nil {
+				a.codeView(c, d)
+			} else if a.htmlView != nil {
+				ui.WebView(c, a.htmlView).Grow(1)
+			}
+		case kindSVG:
+			if a.htmlView != nil {
+				ui.WebView(c, a.htmlView).Grow(1)
+			}
+		case kindTable, kindArchive:
+			a.tableView(c, d)
+		case kindMedia, kindSystem:
+			a.nativePreviewView(c)
 		case kindImage:
-			if d.picture != nil {
-				ui.Image(c, d.picture).Fill().Fit(ui.Contain).Padding(22)
+			if d.imageAnimated && a.htmlView != nil {
+				ui.WebView(c, a.htmlView).Grow(1)
+			} else {
+				a.imageView(c, d)
 			}
 		case kindPDF:
 			if a.pdf != nil {
@@ -450,10 +474,11 @@ func (a *application) codeView(c *ui.Context, d *document) {
 	if d.code == nil {
 		return
 	}
-	d.code.ReadOnly = !d.editing || a.fileOperation
-	d.code.Font.Size = a.fontSize
-	d.code.LineHeight = a.lineHeight
-	editor.View(c, d.code).Grow(1).FillWidth()
+	state := d.visibleCode()
+	state.ReadOnly = !d.editing || a.fileOperation
+	state.Font.Size = a.fontSize
+	state.LineHeight = a.lineHeight
+	editor.View(c, state).Grow(1).FillWidth()
 }
 
 func (a *application) infoView(c *ui.Context, heading, detail string) {
@@ -554,7 +579,11 @@ func (a *application) syncMenu() {
 		{"save", editing && dirty && !a.fileOperation},
 		{"reveal", d != nil},
 		{"refresh", a.root != "" && !a.rootIsFile},
-		{"find", d != nil && d.code != nil && (d.kind == kindText || d.editing)},
+		{"find", d != nil && !d.systemPreview && d.code != nil && (d.kind == kindText || d.editing || d.showSource)},
+		{"image-fit", d != nil && (d.kind == kindImage || d.kind == kindSVG)},
+		{"image-size", d != nil && (d.kind == kindImage || d.kind == kindSVG)},
+		{"preview-source", d != nil && !d.systemPreview && !d.loading && (d.kind == kindTable || d.kind == kindDocument || d.formatted != nil) && !d.editing && d.code != nil},
+		{"system-preview", canUseSystemPreview(d)},
 	} {
 		item := a.menu.ItemByID(state.id)
 		if item != nil && item.IsEnabled() != state.enabled {
@@ -562,6 +591,12 @@ func (a *application) syncMenu() {
 		}
 	}
 	edit := a.menu.ItemByID("edit")
+	if item := a.menu.ItemByID("preview-source"); item != nil {
+		item.SetChecked(d != nil && d.showSource)
+	}
+	if item := a.menu.ItemByID("system-preview"); item != nil {
+		item.SetChecked(d != nil && d.systemPreview)
+	}
 	if edit != nil {
 		label := a.tr("Edit file")
 		if editing {
@@ -585,6 +620,12 @@ func (a *application) installMenu() {
 			fn()
 			a.win.Invalidate()
 		}
+	}
+	readingItems := a.epubReadMenuItems()
+	readingHidden := a.doc == nil || a.doc.kind != kindEPUB
+	if a.doc != nil && a.doc.imagePages > 1 {
+		readingItems = a.imageReadMenuItems()
+		readingHidden = false
 	}
 	a.menu = mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu, Submenu: []*mygo.MenuItem{
@@ -626,17 +667,20 @@ func (a *application) installMenu() {
 			{ID: "refresh", Label: a.tr("Refresh folders"), Accelerator: "CmdOrCtrl+R", Disabled: true, Click: action(a.refreshTree)},
 			{ID: "find", Label: a.tr("Find"), Accelerator: "CmdOrCtrl+F", Disabled: true, Click: action(func() {
 				if a.doc != nil && a.doc.code != nil {
-					a.doc.code.Find("")
+					a.doc.visibleCode().Find("")
 				}
 			})},
 			mygo.Separator(),
-			{Label: a.tr("Increase text size"), Accelerator: "CmdOrCtrl+Plus", Click: action(func() { a.adjustFont(1) })},
-			{Label: a.tr("Decrease text size"), Accelerator: "CmdOrCtrl+-", Click: action(func() { a.adjustFont(-1) })},
+			{Label: a.tr("Zoom in / increase text size"), Accelerator: "CmdOrCtrl+Plus", Click: action(func() { a.adjustContentSize(1) })},
+			{Label: a.tr("Zoom out / decrease text size"), Accelerator: "CmdOrCtrl+-", Click: action(func() { a.adjustContentSize(-1) })},
+			{ID: "image-fit", Label: a.tr("Fit image to window"), Accelerator: "CmdOrCtrl+0", Click: action(func() { a.zoomImage(0) })},
+			{ID: "image-size", Label: a.tr("Image at 100%"), Accelerator: "CmdOrCtrl+1", Click: action(func() { a.zoomImage(1) })},
+			{ID: "preview-source", Label: a.tr("Show source"), Type: mygo.MenuItemCheckbox, Click: action(a.togglePreviewSource)},
+			{ID: "system-preview", Label: a.tr("System preview"), Type: mygo.MenuItemCheckbox, Click: action(a.toggleSystemPreview)},
 			mygo.Separator(),
 			{Role: mygo.RoleToggleFullScreen},
 		}},
-		{Label: a.tr("Reading"), Hidden: a.doc == nil || a.doc.kind != kindEPUB,
-			Submenu: a.epubReadMenuItems()},
+		{Label: a.tr("Reading"), Hidden: readingHidden, Submenu: readingItems},
 		{Label: a.tr("Translation"), Submenu: a.translationMenuItems()},
 		{Role: mygo.RoleWindowMenu},
 	})
@@ -778,6 +822,17 @@ func (a *application) guardClose() {
 
 func main() {
 	app := newApplication()
+	var pendingPaths []string
+	mygo.App.OnOpenFile(func(path string) {
+		if app.win == nil {
+			pendingPaths = append(pendingPaths, path)
+			return
+		}
+		if info, err := os.Stat(path); err == nil {
+			app.setRoot(path, info.IsDir())
+			app.win.Focus()
+		}
+	})
 	mygo.App.SetVersion(releaseVersion)
 	mygo.App.WhenReady(func() {
 		app.loadPreferences()
@@ -796,8 +851,12 @@ func main() {
 		app.win.OnClosed(func() {
 			app.stopUpdates()
 			for _, d := range app.tabs {
+				if d.loadCancel != nil {
+					d.loadCancel()
+				}
 				cancelTranslation(d)
 			}
+			app.closeNativePreview()
 			app.closeEPUB()
 			app.closeHTMLPreview()
 			if app.pdf != nil {
@@ -809,7 +868,9 @@ func main() {
 			}
 		})
 		initialPath := ""
-		if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+		if len(pendingPaths) > 0 {
+			initialPath = pendingPaths[0]
+		} else if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
 			initialPath = os.Args[1]
 		} else if len(app.recentFolders) > 0 {
 			initialPath = app.recentFolders[0]
@@ -835,6 +896,15 @@ func main() {
 				}
 			}
 		}
+		for i, path := range pendingPaths {
+			if i == 0 {
+				continue // The first file was opened above.
+			}
+			if info, err := os.Stat(path); err == nil {
+				app.setRoot(path, info.IsDir())
+			}
+		}
+		pendingPaths = nil
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)

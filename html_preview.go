@@ -170,6 +170,9 @@ func (a *application) sanitizePreviewHTML(fragment, sourceFile, scopeRoot string
 				return
 			}
 			if tag == "img" {
+				if sourceFile == "" {
+					return // Mail/calendar previews never load local or remote images.
+				}
 				src := ""
 				for _, attr := range n.Attr {
 					if strings.EqualFold(attr.Key, "src") {
@@ -195,7 +198,9 @@ func (a *application) sanitizePreviewHTML(fragment, sourceFile, scopeRoot string
 				value := ""
 				switch key {
 				case "style":
-					value = safeCSSDeclarations(attr.Val)
+					if sourceFile != "" {
+						value = safeCSSDeclarations(attr.Val)
+					}
 				case "align":
 					if attr.Val == "center" || attr.Val == "right" || attr.Val == "left" {
 						key = "style"
@@ -324,6 +329,14 @@ func (a *application) generateHTMLPreview(d *document) (string, error) {
 		return "", fmt.Errorf("no document")
 	}
 	switch d.kind {
+	case kindDocument:
+		body, err := a.sanitizePreviewHTML(d.previewHTML, "", "")
+		if err != nil {
+			return "", err
+		}
+		return a.wrapHTMLPreview(body, false, "", ""), nil
+	case kindSVG, kindImage:
+		return a.imageHTML(d), nil
 	case kindMarkdown:
 		html, err := renderMarkdownMarkup(d.source)
 		if err != nil {
@@ -357,6 +370,7 @@ func (a *application) openHTMLPreview(d *document) {
 	html, err := a.generateHTMLPreview(d)
 	if err != nil {
 		a.status = "预览失败：" + err.Error()
+		d.previewError = err.Error()
 		return
 	}
 	if a.htmlView == nil {
@@ -366,6 +380,7 @@ func (a *application) openHTMLPreview(d *document) {
 		})
 		if err != nil {
 			a.status = "HTML 视图创建失败：" + err.Error()
+			d.previewError = err.Error()
 			return
 		}
 		a.htmlView = view
@@ -408,7 +423,7 @@ func (a *application) closeHTMLPreview() {
 
 func (a *application) updateHTMLPreview() {
 	d := a.doc
-	if d == nil || !((d.kind == kindMarkdown && d.htmlRich) || d.kind == kindHTML || d.kind == kindOffice) {
+	if d == nil || d.loading || d.systemPreview || d.previewError != "" || !((d.kind == kindDocument && !d.showSource) || (d.kind == kindMarkdown && d.htmlRich) || d.kind == kindHTML || d.kind == kindOffice || d.kind == kindSVG || d.imageAnimated) {
 		return
 	}
 	a.openHTMLPreview(d)
