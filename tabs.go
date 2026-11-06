@@ -10,6 +10,9 @@ import (
 
 var closeTabGlyph = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m3 3 6 6M9 3 3 9"/></svg>`))
 
+var editTabGlyph = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 3.5 4 4M3 17l1-5L13.5 2.5a2.8 2.8 0 0 1 4 4L8 16z"/></svg>`))
+var finishEditGlyph = ui.MustParseSVG([]byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m4 10 4 4 8-9"/></svg>`))
+
 func (a *application) documentPane(c *ui.Context) {
 	ui.Column(c).Fill().AlignItems(ui.Stretch).Background(c.Theme().Background).Children(func() {
 		if len(a.tabs) > 0 {
@@ -79,6 +82,25 @@ func (a *application) tabBar(c *ui.Context) {
 				a.activateDocument(a.tabs[a.activeTab])
 			}
 		})
+		if d := a.doc; d != nil && d.kind != kindText && d.canEdit() {
+			label := a.tr("Edit file")
+			glyph := editTabGlyph
+			if d.editing {
+				label = a.tr("Finish editing")
+				glyph = finishEditGlyph
+			}
+			ui.Row(c).Shrink(0).Height(height).Padding(0, 8).AlignItems(ui.Center).Children(func() {
+				button := ui.ButtonBase(c).Size(26, 26).Padding(0).Center().Radius(4).Label(label).Disabled(d.saving || a.fileOperation || a.closePrompt || a.closeBatch).Tooltip(label + " (⌘E)")
+				if button.Hovered() {
+					button.Background(t.SurfaceHover)
+				}
+				button.Children(func() { ui.Icon(c, glyph).FontSize(16) })
+				if button.Clicked() {
+					a.toggleEditing()
+				}
+			})
+		}
+
 	})
 	if closing != nil {
 		a.requestCloseTab(closing, false)

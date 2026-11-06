@@ -39,11 +39,13 @@ func newReaderWindow(initialPath string, restore bool) *application {
 	activeReader = a
 	a.win.OnFocus(func() { activeReader = a; a.installMenu() })
 	a.guardClose()
+	a.startFileRefresh()
 	if updateOwner == nil {
 		updateOwner = a
 		a.startUpdates()
 	}
 	a.win.OnClosed(func() {
+		a.fileRefreshCancel()
 		for _, d := range a.tabs {
 			if d.loadCancel != nil {
 				d.loadCancel()

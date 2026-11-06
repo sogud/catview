@@ -41,6 +41,10 @@ curl -fsSL https://raw.githubusercontent.com/sogud/catview/main/install.sh | sh 
 
 ## Use
 
+Text and source-code files are editable immediately and remain editable after saving. Markdown and HTML keep their preview: use the **pencil icon** at the top of the reader or **⌘E** to enter or finish editing. The editor receives focus immediately; use **⌘S** to save. Unsaved changes still require confirmation before leaving editing mode.
+
+Reading mode checks the current file for external changes about once per second and reloads it; other tabs are checked after switching. Automatic reload pauses for unsaved changes and while explicitly editing Markdown or HTML; saving still checks for external conflicts. Reloading HTML, PDF and similar previews may reset the reading position.
+
 Normal quit saves open folders and tabs for the next launch without an explicit file argument. Unsaved edits still use save/discard prompts. The Dock menu includes recent items. Window positions and crash recovery are not restored.
 
 Choose separate reading and code fonts in **Settings → Reading**. Fonts come from your Mac; the code picker lists monospaced families. Changes apply to Markdown, code, HTML and EPUB, without changing fixed-layout PDF or Quick Look documents.

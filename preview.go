@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -33,6 +34,8 @@ func (a *application) loadDocument(target *document) {
 		case <-ctx.Done():
 			return
 		}
+		// Snapshot before reading so a concurrent write is noticed next time.
+		fileInfo, _ := os.Lstat(path)
 		d, err := readDocument(ctx, path, imageIndex)
 		<-previewWorkers
 		if ctx.Err() != nil {
@@ -45,6 +48,7 @@ func (a *application) loadDocument(target *document) {
 			cancel()
 			target.loadCancel = nil
 			target.loading = false
+			target.fileInfo = fileInfo
 			if err == nil && d.picture != nil {
 				w, h := ui.ImageSize(d.picture)
 				pixels := float64(w) * float64(h)
@@ -66,6 +70,9 @@ func (a *application) loadDocument(target *document) {
 				target.kind, target.mode = d.kind, d.mode
 				target.source, target.digest = d.source, d.digest
 				target.code, target.formatted = d.code, d.formatted
+				if target.kind == kindText {
+					target.editing = true
+				}
 				target.picture, target.table = d.picture, d.table
 				target.imagePages, target.imageAnimated = d.imagePages, d.imageAnimated
 				target.htmlRich, target.officeHTML = d.htmlRich, d.officeHTML
@@ -265,4 +272,65 @@ func (a *application) adjustContentSize(delta float32) {
 		scale /= 1.25
 	}
 	a.zoomImage(max(float32(0.1), min(float32(8), scale)))
+}
+
+// Check only the visible document, off the UI thread. Watching the path rather
+// than an open descriptor also catches editors that save by atomic replacement.
+func (a *application) startFileRefresh() {
+	ctx, cancel := context.WithCancel(context.Background())
+	a.fileRefreshCancel = cancel
+	win := a.win
+	go func() {
+		tick := time.NewTicker(time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				win.Update(func() {
+					if ctx.Err() == nil {
+						a.checkCurrentFile(ctx)
+					}
+				})
+			}
+		}
+	}()
+}
+
+func (a *application) checkCurrentFile(ctx context.Context) {
+	d := a.doc
+	if a.fileRefreshBusy || a.fileOperation || a.closePrompt || a.closeBatch || d == nil || d.fileInfo == nil || d.loading || (d.editing && d.kind != kindText) || d.saving || documentModified(d) {
+		return
+	}
+	a.fileRefreshBusy = true
+	path, previous := d.path, d.fileInfo
+	win := a.win
+	go func() {
+		current, err := os.Lstat(path)
+		win.Update(func() {
+			a.fileRefreshBusy = false
+			if ctx.Err() != nil || a.doc != d || d.path != path || d.fileInfo != previous || d.loading || (d.editing && d.kind != kindText) || d.saving || documentModified(d) || a.fileOperation || a.closePrompt || a.closeBatch {
+				return
+			}
+			// Preserve the last readable document during delete/rename-save gaps.
+			if err != nil || !current.Mode().IsRegular() || !pathInScope(d.scopeRoot, path) {
+				return
+			}
+			if os.SameFile(previous, current) && previous.Size() == current.Size() && previous.ModTime().Equal(current.ModTime()) {
+				return
+			}
+			cancelTranslation(d)
+			d.translation = documentTranslation{}
+			a.closeNativePreview()
+			a.closeEPUB()
+			a.closeHTMLPreview()
+			if a.pdf != nil {
+				a.pdf.Destroy()
+				a.pdf = nil
+			}
+			a.loadDocument(d)
+			win.Invalidate()
+		})
+	}()
 }

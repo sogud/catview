@@ -51,6 +51,7 @@ type fileEntry struct {
 
 type document struct {
 	loading            bool
+	fileInfo           os.FileInfo
 	previewError       string
 	loadCancel         context.CancelFunc
 	table              *tablePreview
@@ -81,6 +82,7 @@ type document struct {
 	officeLegacy       bool
 	book               *epubBook
 	editing            bool
+	focusEditor        bool
 }
 
 func (d *document) canEdit() bool {
@@ -554,7 +556,7 @@ func (a *application) saveDocument() {
 			}
 			if d.code.Buffer.Version() == version {
 				d.code.Buffer.MarkSaved()
-				d.editing = false
+				d.editing = d.kind == kindText
 			}
 			a.status = a.tr("Saved ") + filepath.Base(path)
 		})

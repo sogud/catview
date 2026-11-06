@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"os"
@@ -49,6 +50,8 @@ type application struct {
 	fileRow           int
 	loadSerial        uint64
 	loadEpoch         uint64
+	fileRefreshCancel context.CancelFunc
+	fileRefreshBusy   bool
 	treeVersion       uint64
 	sidebarVisible    bool
 	sidebarWidth      float32
@@ -460,7 +463,11 @@ func (a *application) codeView(c *ui.Context, d *document) {
 		state.Font.Family = "monospace"
 	}
 	state.LineHeight = a.lineHeight
-	editor.View(c, state).Grow(1).FillWidth()
+	view := editor.View(c, state).Grow(1).FillWidth()
+	if d.focusEditor && d.editing {
+		view.Focus()
+		d.focusEditor = false
+	}
 }
 
 func (a *application) infoView(c *ui.Context, heading, detail string) {
@@ -497,7 +504,7 @@ func (a *application) toggleEditing() {
 		return
 	}
 	d := a.doc
-	if d == nil || !d.canEdit() {
+	if d == nil || d.kind == kindText || !d.canEdit() {
 		return
 	}
 	if d.editing {
@@ -505,6 +512,7 @@ func (a *application) toggleEditing() {
 	} else {
 		clearTranslation(d)
 		d.editing = true
+		d.focusEditor = true
 	}
 	a.win.Invalidate()
 }
@@ -572,7 +580,7 @@ func (a *application) syncMenu() {
 		id      string
 		enabled bool
 	}{
-		{"edit", canEdit},
+		{"edit", canEdit && d.kind != kindText},
 		{"save", editing && dirty && !a.fileOperation},
 		{"reveal", d != nil},
 		{"refresh", a.root != "" && !a.rootIsFile},
@@ -641,7 +649,7 @@ func (a *application) installMenu() {
 			{Label: a.tr("Recent items"), Submenu: a.recentMenuItems()},
 			{Label: a.tr("Open history…"), Click: action(a.showHistory)},
 			mygo.Separator(),
-			{ID: "edit", Label: a.tr("Edit file"), Disabled: true, Click: action(a.toggleEditing)},
+			{ID: "edit", Label: a.tr("Edit file"), Accelerator: "CmdOrCtrl+E", Disabled: true, Click: action(a.toggleEditing)},
 			{ID: "save", Label: a.tr("Save"), Accelerator: "CmdOrCtrl+S", Disabled: true, Click: action(a.saveDocument)},
 			{ID: "reveal", Label: a.tr("Show in Finder"), Disabled: true, Click: action(func() {
 				if a.doc != nil {
