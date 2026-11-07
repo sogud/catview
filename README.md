@@ -1,5 +1,7 @@
 # CatView
 
+[![Listed on Awesome MyGo](https://awesomemygo.dev/badge.svg)](https://awesomemygo.dev/apps/catview)
+
 English · [简体中文](README.zh-CN.md)
 
 **Open a folder. Read your files.**
